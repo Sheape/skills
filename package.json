@@ -1,0 +1,19 @@
+{
+  "name": "sheape-skills",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Agent skills I use with Codex",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sheape/skills"
+  },
+  "author": "Sheape <paulpare@protonmail.com>",
+  "license": "MIT",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "11.22.0",
+      "onFail": "download"
+    }
+  }
+}

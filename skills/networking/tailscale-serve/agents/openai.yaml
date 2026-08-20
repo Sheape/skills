@@ -1,0 +1,4 @@
+interface:
+  display_name: "Tailscale Serve"
+  short_description: "Share a local app privately over HTTPS"
+  default_prompt: "Use $tailscale-serve to run this project and share it on my tailnet."
