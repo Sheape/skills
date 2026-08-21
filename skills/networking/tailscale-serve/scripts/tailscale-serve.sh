@@ -38,12 +38,14 @@ pick_port() {
   need tailscale
   need jq
   need lsof
+  need launchctl
   check_tailscale
 
   local port
   for ((port = 3001; port <= 3999; port++)); do
     if ! local_port_used "$port" \
       && ! tailscale_port_used "$port" \
+      && ! job_loaded "$port" \
       && [[ ! -e "$(state_dir "$port")" ]]; then
       printf '%s\n' "$port"
       return
@@ -52,62 +54,97 @@ pick_port() {
   fail 'no free port found from 3001 through 3999'
 }
 
-process_signature() {
-  ps -p "$1" -o command= 2>/dev/null | sed 's/^[[:space:]]*//'
+launch_domain() {
+  printf 'gui/%s\n' "$(id -u)"
 }
 
-is_descendant() {
-  local child="$1" ancestor="$2" parent
-  while [[ "$child" =~ ^[0-9]+$ ]] && (( child > 1 )); do
-    [[ "$child" == "$ancestor" ]] && return 0
-    parent="$(ps -p "$child" -o ppid= 2>/dev/null | tr -d ' ' || true)"
-    child="$parent"
+job_label() {
+  printf 'io.agent-skills.tailscale-serve.%s.%s\n' "$(id -u)" "$1"
+}
+
+job_target() {
+  printf '%s/%s\n' "$(launch_domain)" "$(job_label "$1")"
+}
+
+job_loaded() {
+  launchctl print "$(job_target "$1")" >/dev/null 2>&1
+}
+
+job_running() {
+  launchctl print "$(job_target "$1")" 2>/dev/null | grep -q 'state = running'
+}
+
+write_job() {
+  local directory="$1" port="$2" working_directory="$3"
+  local executable label plist argument index=1
+  shift 3
+
+  executable="$(command -v "$1")" || {
+    printf 'server command not found: %s\n' "$1" >&2
+    return 1
+  }
+  [[ "$executable" == /* ]] || executable="$working_directory/${executable#./}"
+  [[ -x "$executable" ]] || {
+    printf 'server command is not executable: %s\n' "$executable" >&2
+    return 1
+  }
+  shift
+
+  label="$(job_label "$port")"
+  plist="$directory/job.plist"
+  plutil -create xml1 "$plist" || return
+  plutil -insert Label -string "$label" "$plist" || return
+  plutil -insert ProgramArguments -array "$plist" || return
+  plutil -insert ProgramArguments.0 -string "$executable" "$plist" || return
+  for argument in "$@"; do
+    plutil -insert "ProgramArguments.$index" -string "$argument" "$plist" || return
+    index=$((index + 1))
   done
-  return 1
+  plutil -insert WorkingDirectory -string "$working_directory" "$plist" || return
+  plutil -insert EnvironmentVariables -dictionary "$plist" || return
+  plutil -insert EnvironmentVariables.PATH -string "$PATH" "$plist" || return
+  plutil -insert EnvironmentVariables.HOME -string "$HOME" "$plist" || return
+  if [[ -n "${TMPDIR:-}" ]]; then
+    plutil -insert EnvironmentVariables.TMPDIR -string "$TMPDIR" "$plist" || return
+  fi
+  plutil -insert RunAtLoad -bool YES "$plist" || return
+  plutil -insert StandardOutPath -string "$directory/server.log" "$plist" || return
+  plutil -insert StandardErrorPath -string "$directory/server.log" "$plist" || return
+  printf '%s\n' "$label" > "$directory/label"
 }
 
-record_process() {
-  local directory="$1" pid="$2" signature
-  signature="$(process_signature "$pid")"
-  [[ -n "$signature" ]] && printf '%s\t%s\n' "$pid" "$signature" >> "$directory/processes"
-}
+stop_job() {
+  local directory="$1" port="$2" expected label plist_label plist_cwd
+  [[ -r "$directory/label" && -r "$directory/job.plist" && -r "$directory/cwd" ]] || {
+    printf 'missing launchd ownership state for port %s\n' "$port" >&2
+    return 1
+  }
 
-stop_processes() {
-  local directory="$1" pid expected actual attempt
-  local -a pids=()
-  [[ -f "$directory/processes" ]] || return
+  expected="$(job_label "$port")"
+  label="$(< "$directory/label")"
+  plist_label="$(plutil -extract Label raw -o - "$directory/job.plist" 2>/dev/null || true)"
+  plist_cwd="$(plutil -extract WorkingDirectory raw -o - "$directory/job.plist" 2>/dev/null || true)"
+  [[ "$label" == "$expected" && "$plist_label" == "$expected" \
+    && "$plist_cwd" == "$(< "$directory/cwd")" ]] || {
+    printf 'launchd ownership check failed for port %s\n' "$port" >&2
+    return 1
+  }
 
-  while IFS=$'\t' read -r pid expected; do
-    actual="$(process_signature "$pid")"
-    [[ -n "$actual" && "$actual" == "$expected" ]] && pids+=("$pid")
-  done < "$directory/processes"
-
-  ((${#pids[@]})) || return
-  kill -TERM "${pids[@]}" 2>/dev/null || true
-
-  for ((attempt = 0; attempt < 20; attempt++)); do
-    local -a alive=()
-    for pid in "${pids[@]}"; do
-      kill -0 "$pid" 2>/dev/null && alive+=("$pid")
-    done
-    ((${#alive[@]} == 0)) && return
-    pids=("${alive[@]}")
-    sleep 0.25
-  done
-
-  kill -KILL "${pids[@]}" 2>/dev/null || true
+  if job_loaded "$port"; then
+    launchctl bootout "$(job_target "$port")"
+  fi
 }
 
 remove_state() {
   local directory="$1"
   rm -f "$directory/argv" "$directory/cwd" "$directory/type" \
-    "$directory/processes" "$directory/server.log"
+    "$directory/job.plist" "$directory/label" "$directory/server.log"
   rmdir "$directory" 2>/dev/null || true
 }
 
 open_server() {
-  local app_type="$1" port="$2" directory server_pid listeners listener
-  local serve_output status_json dns_name attempt
+  local app_type="$1" port="$2" directory listeners
+  local launch_output serve_output status_json dns_name attempt
   shift 2
 
   valid_port "$port" || fail "invalid port: $port"
@@ -119,9 +156,13 @@ open_server() {
   need tailscale
   need jq
   need lsof
+  need launchctl
+  need plutil
+  [[ "$(uname -s)" == Darwin ]] || fail 'persistent server launch requires macOS launchd'
   check_tailscale
   local_port_used "$port" && fail "local port $port is already in use"
   tailscale_port_used "$port" && fail "Tailscale port $port is already configured"
+  job_loaded "$port" && fail "launchd job already exists for port $port"
 
   directory="$(state_dir "$port")"
   [[ ! -e "$directory" ]] || fail "state already exists for port $port; close it first"
@@ -130,34 +171,32 @@ open_server() {
   printf '%s\n' "$app_type" > "$directory/type"
   printf '%s\0' "$@" > "$directory/argv"
 
-  nohup "$@" > "$directory/server.log" 2>&1 &
-  server_pid=$!
+  if ! launch_output="$(write_job "$directory" "$port" "$PWD" "$@" 2>&1)"; then
+    remove_state "$directory"
+    fail "$launch_output"
+  fi
+  if ! launch_output="$(launchctl bootstrap "$(launch_domain)" "$directory/job.plist" 2>&1)"; then
+    remove_state "$directory"
+    fail "$launch_output"
+  fi
 
   listeners=''
   for ((attempt = 0; attempt < 60; attempt++)); do
     listeners="$(lsof -nP -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null || true)"
     [[ -n "$listeners" ]] && break
-    kill -0 "$server_pid" 2>/dev/null || break
+    job_running "$port" || break
     sleep 0.5
   done
 
-  if [[ -z "$listeners" ]] || ! kill -0 "$server_pid" 2>/dev/null; then
+  if [[ -z "$listeners" ]]; then
     tail -n 30 "$directory/server.log" >&2 || true
-    kill -TERM "$server_pid" 2>/dev/null || true
+    stop_job "$directory" "$port" || fail "server failed and launchd job could not be stopped on port $port"
     remove_state "$directory"
     fail "server did not stay up on 127.0.0.1:$port"
   fi
 
-  record_process "$directory" "$server_pid"
-  while IFS= read -r listener; do
-    if [[ -n "$listener" && "$listener" != "$server_pid" ]] \
-      && is_descendant "$listener" "$server_pid"; then
-      record_process "$directory" "$listener"
-    fi
-  done <<< "$listeners"
-
   if ! serve_output="$(tailscale serve --bg --yes --https="$port" "127.0.0.1:$port" 2>&1)"; then
-    stop_processes "$directory"
+    stop_job "$directory" "$port" || fail "$serve_output; launchd job could not be stopped"
     remove_state "$directory"
     fail "$serve_output"
   fi
@@ -177,7 +216,7 @@ open_server() {
     '(.TCP[$port].HTTPS == true) and any(.Web[]?.Handlers[]?; .Proxy == $proxy)' \
     >/dev/null 2>&1 <<< "$status_json"; then
     tailscale serve --yes --https="$port" off >/dev/null 2>&1 || true
-    stop_processes "$directory"
+    stop_job "$directory" "$port" || fail "Tailscale setup failed and launchd job could not be stopped"
     remove_state "$directory"
     fail "Tailscale did not configure HTTPS port $port"
   fi
@@ -189,7 +228,7 @@ open_server() {
   )"
   if [[ -z "$dns_name" || "$dns_name" == 'null' ]]; then
     tailscale serve --yes --https="$port" off >/dev/null 2>&1 || true
-    stop_processes "$directory"
+    stop_job "$directory" "$port" || fail "Tailscale returned no DNS name and launchd job could not be stopped"
     remove_state "$directory"
     fail 'Tailscale returned no DNS name'
   fi
@@ -201,16 +240,18 @@ close_server() {
   local port="$1" directory serve_failed=0
   valid_port "$port" || fail "invalid port: $port"
   need tailscale
+  need launchctl
+  need plutil
 
   directory="$(state_dir "$port")"
-  tailscale serve --yes --https="$port" off >/dev/null 2>&1 || serve_failed=1
-
   if [[ -d "$directory" ]]; then
-    stop_processes "$directory"
-    remove_state "$directory"
+    stop_job "$directory" "$port" || fail "could not stop owned launchd job on port $port"
   fi
 
+  tailscale serve --yes --https="$port" off >/dev/null 2>&1 || serve_failed=1
+
   ((serve_failed == 0)) || fail "could not close Tailscale HTTPS port $port"
+  [[ ! -d "$directory" ]] || remove_state "$directory"
   printf 'Closed Tailscale Serve and the server on port %s.\n' "$port"
 }
 
@@ -258,4 +299,3 @@ case "${1:-}" in
     fail 'usage: tailscale-serve.sh {port|open|close|restart} ...'
     ;;
 esac
-

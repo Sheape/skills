@@ -1,0 +1,6 @@
+interface:
+  display_name: "Reopen T3 Code"
+  short_description: "Restart T3 Code and reopen it minimized"
+  default_prompt: "Use $reopen-t3-code to restart T3 Code and reopen it minimized."
+policy:
+  allow_implicit_invocation: false
