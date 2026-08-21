@@ -19,3 +19,34 @@ Object.defineProperty(window, "localStorage", {
   configurable: true,
   value: memoryStorage,
 });
+
+Object.defineProperty(window, "matchMedia", {
+  configurable: true,
+  value: (query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => undefined,
+    removeEventListener: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
+    dispatchEvent: () => false,
+  }),
+});
+
+Object.defineProperty(navigator, "clipboard", {
+  configurable: true,
+  value: { writeText: async () => undefined },
+});
+
+class TestResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.defineProperty(window, "ResizeObserver", { configurable: true, value: TestResizeObserver });
+Object.defineProperty(globalThis, "ResizeObserver", {
+  configurable: true,
+  value: TestResizeObserver,
+});

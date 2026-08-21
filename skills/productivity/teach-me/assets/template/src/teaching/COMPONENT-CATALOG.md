@@ -1,10 +1,13 @@
 # Shared component catalog
 
-- `AppLayout`, `TopicLayout`, `TopicSidebar`: course and topic navigation.
-- `LessonPage`, `LessonNavigation`: lesson frame, sources, explicit completion, and adjacent routes.
-- `SteppedScene`, `StepControls`: bounded authored states, reset, step selection, and scoped keyboard navigation.
-- `PredictionPrompt`, `ChallengeCard`: local prediction and progressive authored help.
-- `Citation`, `SourcePanel`, `FidelityBadge`: frozen sources and model fidelity.
-- `ThemeProvider`, `ThemeToggle`: system default with a locally persisted override.
+Use `/__catalog` to inspect and test every shared state. It is not a learner lesson.
 
-Lesson-specific code viewers, diagrams, plots, diff views, and document maps belong beside the lesson that needs them. Promote one here after a second real lesson needs the same behavior and tests.
+- Shell: `AppLayout`, `TopicLayout`, `TopicSidebar`, `LessonPage`, `LessonNavigation`, completion, lesson reset, and theme.
+- Scenes: `SteppedScene` and `StepControls`.
+- Grading: `ChoiceActivity`, `OrderActivity`, `MatchActivity`, `SliderActivity`, `TraceActivity`, `DiagramActivity`, and the shared activity controller.
+- Code: `CodeBlock`, `CodeWalkthrough`, and `CodeScratchpad`.
+- Diagrams: `DiagramCanvas` for React Flow and `MermaidDiagram` as a static last resort.
+- Evidence: `Citation`, `SourcePanel`, and `FidelityBadge`.
+- Annotations: `AnnotationTarget`, hover preview, and pinned inspector.
+
+New lessons may add specialized components. Keep plots, memory views, timelines, diff views, and unusual diagrams lesson-local until repeated lesson behavior justifies promotion. A promoted component gets a deterministic catalog state and tests.

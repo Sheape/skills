@@ -50,6 +50,16 @@ if [[ -n "$outer_root" && "$destination" == "$outer_root/.lessons" ]]; then
   grep -Fxq '/.lessons/' "$exclude_file" 2>/dev/null || printf '\n/.lessons/\n' >>"$exclude_file"
 fi
 
+command -v node >/dev/null 2>&1 || {
+  echo "Node.js 20 or newer is required." >&2
+  exit 1
+}
+node_major="$(node -p 'process.versions.node.split(".")[0]')"
+if (( node_major < 20 )); then
+  echo "Node.js 20 or newer is required; found $(node --version)." >&2
+  exit 1
+fi
+
 if command -v vp >/dev/null 2>&1; then
   vite_plus="$(command -v vp)"
 elif [[ -x "${HOME}/.vite-plus/bin/vp" ]]; then

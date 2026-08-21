@@ -1,8 +1,10 @@
-import { useCallback, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
 import { ArrowLeftIcon, ArrowRightIcon, RotateCcwIcon } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { Button } from "@/components/ui/button";
+import { useOptionalLessonChrome } from "@/app/components/annotations";
+import { useOptionalLessonRuntime } from "@/app/components/activity-runtime";
 import type { SceneStep, SteppedSceneProps } from "@/app/types";
 
 interface StepControlsProps {
@@ -67,6 +69,8 @@ export function SteppedScene<TStep extends SceneStep>({
   if (!steps.length) throw new Error("SteppedScene requires at least one step");
   const initialIndex = Math.min(Math.max(initialStep, 0), steps.length - 1);
   const [index, setIndex] = useState(initialIndex);
+  const runtime = useOptionalLessonRuntime();
+  const chrome = useOptionalLessonChrome();
   const reduceMotion = useReducedMotion();
   const goTo = useCallback(
     (nextIndex: number) => setIndex(Math.min(Math.max(nextIndex, 0), steps.length - 1)),
@@ -76,6 +80,9 @@ export function SteppedScene<TStep extends SceneStep>({
   const next = useCallback(() => goTo(index + 1), [goTo, index]);
   const reset = useCallback(() => goTo(initialIndex), [goTo, initialIndex]);
   const step = steps[index];
+
+  useEffect(() => setIndex(initialIndex), [initialIndex, runtime?.revision]);
+  useEffect(() => chrome?.closeAnnotation(), [chrome, index]);
 
   const onKeyDown = (event: KeyboardEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;

@@ -14,4 +14,4 @@ Never make one lesson cover the whole codebase. Split by responsibility or execu
 
 Anchor the route in a question the learner can answer afterward. Reveal boundaries and data flow first, then zoom into only the functions needed for that question. Use exact file/symbol citations and a commit snapshot. Separate code facts from conceptual simplifications and architectural inferences.
 
-When control flow branches, walk normal, many-data/high-volume, empty/no-input, and one meaningful edge path. End by asking the learner to predict where a new behavior belongs or trace a related path without assistance.
+When control flow branches, walk normal, many-data or high-volume, empty or no-input, and one meaningful edge path. End with a deterministic prediction about where behavior belongs, which path data takes, or which function runs next.

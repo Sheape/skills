@@ -38,7 +38,7 @@ export function AppLayout() {
         THESIS: authored states make mechanisms inspectable; refuse the one-page lesson dump.
         OWN-WORLD: Notion paper-light surfaces, Vercel ink-dark surfaces, restrained blue action.
         STORY: choose a lesson, predict, step through state, inspect sources, mark the lesson complete.
-        FIRST VIEWPORT: compact utility bar, topic rail, and one generous reading column.
+        FIRST VIEWPORT: compact utility bar, closed topic drawer, and one generous reading column.
         FORM: quiet technical notebook; pinned brief overrides concept seed 0085c8c1.
         FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
       */}
@@ -47,7 +47,10 @@ export function AppLayout() {
           <BookOpenIcon aria-hidden="true" />
           <span>Teach me</span>
         </Link>
-        <ThemeToggle />
+        <div className="app-actions">
+          <div id="topic-controls" />
+          <ThemeToggle />
+        </div>
       </header>
       <Outlet />
     </div>

@@ -12,7 +12,7 @@ For real-valued mathematics:
 
 1. begin with a graph or geometric question;
 2. expose one or two parameters the learner can vary;
-3. ask for a conjecture before naming the formula;
+3. check a conjecture before naming the formula;
 4. connect each symbolic step to the visible geometry;
 5. include a counterexample, limiting case, or domain boundary;
 6. finish with a difficult transfer or synthesis problem.

@@ -1,39 +1,35 @@
 ---
 name: teach-me
 description: Research, author, test, and serve a visual interactive lesson as a route in a local React teaching workspace.
-disable-model-invocation: true
-argument-hint: "What should I teach you?"
 ---
 
 # Teach me
 
 <IMPORTANT>
-Do not present a lesson until its content, automated checks, production build, and exact browser route are all verified. A plausible draft is not a lesson.
+Present a lesson only after its material, automated checks, production build, and exact browser route pass verification. A plausible draft is not a lesson.
 </IMPORTANT>
 
-Build or extend one local, frontend-only course. Each lesson is a React Router data-mode route at `/<topic>/lesson-NNN`; it is never a standalone HTML file.
+Build or extend one local, frontend-only course. Each lesson is a React Router data-mode route at `/<topic>/lesson-NNN`, never a standalone HTML file.
 
-## 1. Find or bootstrap the workspace
+## 1. Open the workspace
 
-Look upward for `.teach-me-template`. If absent, run `scripts/bootstrap.sh` from this skill. In an existing Git repository it creates a nested `.lessons/` app, adds `/.lessons/` to the outer repository's `.git/info/exclude`, and initializes independent local Git history. In a truly empty directory it uses that directory. Never overwrite an unmarked non-empty destination.
+Look upward for `.teach-me-template`. If absent, run `scripts/bootstrap.sh` from this skill. In an existing Git repository it creates an independently versioned `.lessons/` app and adds `/.lessons/` to the outer repository's local exclude file. In an empty directory it uses that directory. It refuses to overwrite unmarked content.
 
-Read the workspace `AGENTS.md`, all files in `src/teaching/`, and [APP-CONTRACT.md](./references/APP-CONTRACT.md). For an existing topic also read `MISSION.md`, `NOTES.md`, `RESOURCES.md`, `GLOSSARY.md`, and every active learning record.
+Read the workspace `AGENTS.md`, every file in `src/teaching/`, and [APP-CONTRACT.md](./references/APP-CONTRACT.md). For an existing topic, also read its mission, notes, resources, glossary, and active learning records.
 
-## 2. Establish the target
+## 2. Set the target and evidence
 
-Create or tighten the topic mission using [MISSION-FORMAT.md](./references/MISSION-FORMAT.md). Pick the next unused three-digit lesson number and never renumber old lessons.
+Create or tighten the topic mission with [MISSION-FORMAT.md](./references/MISSION-FORMAT.md). Pick the next unused three-digit lesson number and preserve existing lesson numbers.
 
-For technologies, default to the latest stable release. Ask only when several mainstream choices materially change the lesson, such as Node LTS versus Current, Java releases, or C++ standards. A user-pinned version always wins.
+For technologies, use a user-pinned version. Otherwise default to latest stable. Ask when mainstream tracks change the lesson, such as Node LTS versus Current or language standards.
 
-## 3. Research and verify the material
+Follow [SOURCES.md](./references/SOURCES.md). Capture current primary sources while authoring, then freeze their revision, capture date, claims, excerpts, code, and PR data into the lesson. The finished route never discovers or interprets live teaching material.
 
-Follow [SOURCES.md](./references/SOURCES.md). Use current primary sources during authoring and freeze their revision, capture date, claims, excerpts, code, and PR data into the lesson. The finished route must not discover or reinterpret live teaching material.
+Verify libraries, languages, and frameworks with the real version in a disposable environment. Install locally when practical and use Docker when the host lacks it. Hardware, payment, or authentication boundaries use authoritative sources instead. Do not involve the learner in login or purchase merely to verify a lesson.
 
-For any library, language, or framework, verify with the real version in a disposable environment instead of guessing. Install it locally when practical; use Docker when the host lacks it. If hardware, payment, or authentication makes that unreasonable, use authoritative sources and record the limitation. Never ask the learner to sign in or buy something merely to verify a lesson.
+## 3. Choose this lesson's mode
 
-## 4. Choose this lesson's mode
-
-Mode belongs to the lesson, not its topic. Choose one primary mode and read only its reference:
+Mode belongs to the lesson, not the topic. Choose one primary mode and read only its reference:
 
 - [technology](./references/modes/technology.md): library, language, or framework
 - [pr-diff](./references/modes/pr-diff.md): pull request or code diff
@@ -45,22 +41,21 @@ Mode belongs to the lesson, not its topic. Choose one primary mode and read only
 
 Modes may borrow each other's visuals. Read [PEDAGOGY.md](./references/PEDAGOGY.md), then teach one useful capability just above the learner's demonstrated floor.
 
-## 5. Author the complete lesson
+## 4. Design the interaction
 
-Create `src/topics/<topic>/lessons/lesson-NNN/` with:
+Read [INTERACTIONS.md](./references/INTERACTIONS.md) for every lesson. Each lesson needs at least one deterministic, checkable learner decision. Stepping, panning, opening an annotation, and editing an unexecuted scratchpad are presentation controls, not the required activity.
 
-- `meta.ts`: title, summary, and primary mode
-- `route.tsx`: named `Component` export
-- `sources.ts`: frozen citation records
-- `VERIFICATION.md`: evidence using [VERIFICATION.md](./references/VERIFICATION.md)
+Read the matching branch only when the lesson needs it:
 
-Add lesson-local state, SVG, plots, diff views, or components when required. Compose the shared runtime first; promote a lesson component to `src/app/components/` only after a second real lesson needs the same behavior. Agents author semantic states, not animation choreography.
+- [CODE-WALKTHROUGHS.md](./references/CODE-WALKTHROUGHS.md) for source, diffs, authored traces, or editable scratchpads.
+- [DIAGRAMS.md](./references/DIAGRAMS.md) for architecture, data flow, ERDs, state machines, plots, geometry, or graph construction.
+- [ANNOTATIONS.md](./references/ANNOTATIONS.md) for do, don't, warning, or note explanations.
 
-Every interaction must be side-effect free, deterministic, resettable, keyboard-accessible, and reproducible. Separate literal output, program state, and conceptual visualization. Put `exact`, `simplified`, or `conceptual` next to the state it qualifies.
+Create `src/topics/<topic>/lessons/lesson-NNN/` with `meta.ts`, `route.tsx`, `sources.ts`, and `VERIFICATION.md`. Add walkthrough data, tests, visuals, or lesson-local components when required. Compose the shared runtime first. A new lesson may add a specialized component; move it into `src/app/components/` only when it represents repeated lesson behavior.
 
-## 6. Prove it
+## 5. Prove the complete lesson
 
-Add the smallest automated test that would fail if each new interaction broke. Run:
+Add the smallest automated checks that fail when the new content or interactions break. Run:
 
 ```bash
 vp check
@@ -68,12 +63,12 @@ vp test
 vp build
 ```
 
-Then follow [VERIFICATION.md](./references/VERIFICATION.md): open the exact route in a browser and exercise every state, representative case, reset, keyboard path, direct reload, narrow layout, reduced-motion behavior, citation interaction, and completion action. Check the console. Fix every issue before continuing.
+Follow [VERIFICATION.md](./references/VERIFICATION.md). Use ego-lite to open the exact route and operate every relevant state, case, answer path, reset, keyboard path, direct reload, drawer, annotation, citation, and completion action. Check narrow layout, reduced motion, console errors, failed requests, clipping, and diagram connectors. Fix every issue before continuing.
 
-Commit the green lesson in the nested workspace with a Conventional Commit message. Do not add a remote or push.
+If the `unslop` skill is installed, use it for the final learner-facing copy pass. Commit the green lesson in the nested workspace with a Conventional Commit message. Do not add a remote or push.
 
-## 7. Deliver, then learn
+## 6. Deliver, then learn
 
-If the `tailscale-serve` skill is installed, run it for the verified lesson app and perform no alternative serving workflow. If it is missing, start the app and open the exact lesson route using the available browser workflow.
+If the `tailscale-serve` skill is installed, run it for the verified app and perform no other exposure workflow. If missing, keep the app running locally and open the exact route with ego-lite.
 
-Update learning records only after interaction supplies evidence: demonstrated understanding, relevant prior knowledge, a corrected misconception, or a changed mission. Coverage alone is not learning.
+Update learning records only after interaction supplies evidence such as demonstrated understanding, relevant prior knowledge, a corrected misconception, or a changed mission. Coverage alone is not learning.

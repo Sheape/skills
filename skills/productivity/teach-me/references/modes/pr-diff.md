@@ -18,4 +18,4 @@ Explain:
 4. important line-level changes;
 5. risks, invariants, and tests.
 
-Use a synchronized diff and authored trace where code behavior matters. Include three to five representative cases: normal, many-data/high-volume, empty/no-input, and a meaningful edge or failure. Distinguish observed facts from inferred intent. Cite the PR, commits, files/lines, and authoritative API docs used to interpret it.
+Use a synchronized diff and authored debugger trace where code behavior matters. Include three to five representative cases: normal, many-data or high-volume, empty or no-input, and a meaningful edge or failure. Add a deterministic prediction about changed behavior, ownership, data flow, or risk. Distinguish observed facts from inferred intent. Cite the PR, commits, files and lines, and authoritative API docs used to interpret it.

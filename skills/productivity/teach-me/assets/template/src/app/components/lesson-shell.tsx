@@ -1,12 +1,40 @@
-import { createContext, useContext, type ReactNode } from "react";
-import { ArrowLeftIcon, ArrowRightIcon, CheckIcon, CircleIcon } from "lucide-react";
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import {
+  ArrowLeftIcon,
+  ArrowRightIcon,
+  CheckIcon,
+  CircleIcon,
+  MenuIcon,
+  RotateCcwIcon,
+} from "lucide-react";
 import { Link, useLocation } from "react-router";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import type { DiscoveredLesson, DiscoveredTopic, LessonMode, LessonSource } from "@/app/types";
-import { setLessonComplete, useLessonCompletion } from "@/app/progress";
+import { hasLessonState, setLessonComplete, useLessonCompletion } from "@/app/progress";
 import { SourcePanel } from "@/app/components/sources";
+import { LessonRuntimeProvider, useLessonRuntime } from "@/app/components/activity-runtime";
+import { LessonChromeProvider, useLessonChrome } from "@/app/components/annotations";
 
 const TopicContext = createContext<DiscoveredTopic | null>(null);
 
@@ -17,7 +45,11 @@ export function TopicProvider({
   topic: DiscoveredTopic;
   children: ReactNode;
 }) {
-  return <TopicContext value={topic}>{children}</TopicContext>;
+  return (
+    <TopicContext value={topic}>
+      <LessonChromeProvider>{children}</LessonChromeProvider>
+    </TopicContext>
+  );
 }
 
 function useTopic() {
@@ -28,8 +60,14 @@ function useTopic() {
 
 function LessonLink({ lesson, active }: { lesson: DiscoveredLesson; active: boolean }) {
   const complete = useLessonCompletion(lesson.href);
+  const { setDrawerOpen } = useLessonChrome();
   return (
-    <Link to={lesson.href} className="topic-lesson-link" aria-current={active ? "page" : undefined}>
+    <Link
+      to={lesson.href}
+      className="topic-lesson-link"
+      aria-current={active ? "page" : undefined}
+      onClick={() => setDrawerOpen(false)}
+    >
       {complete ? <CheckIcon aria-label="Complete" /> : <CircleIcon aria-hidden="true" />}
       <span>
         <small>{lesson.lessonId.replace("lesson-", "Lesson ")}</small>
@@ -42,25 +80,44 @@ function LessonLink({ lesson, active }: { lesson: DiscoveredLesson; active: bool
 export function TopicSidebar() {
   const topic = useTopic();
   const location = useLocation();
+  const { drawerOpen, setDrawerOpen } = useLessonChrome();
+  const [controls, setControls] = useState<HTMLElement | null>(null);
+  useEffect(() => setControls(document.getElementById("topic-controls")), []);
+
   return (
-    <aside className="topic-sidebar">
-      <div className="topic-summary">
-        <Link to="/" className="course-home-link">
-          Teach me
-        </Link>
-        <h2>{topic.title}</h2>
-        <p>{topic.summary}</p>
-      </div>
-      <nav aria-label={`${topic.title} lessons`}>
-        {topic.lessons.map((lesson) => (
-          <LessonLink
-            key={lesson.href}
-            lesson={lesson}
-            active={location.pathname === lesson.href}
-          />
-        ))}
-      </nav>
-    </aside>
+    <>
+      {controls &&
+        createPortal(
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setDrawerOpen(true)}
+            aria-label="Open lesson menu"
+          >
+            <MenuIcon data-icon="inline-start" aria-hidden="true" />
+            Lessons
+          </Button>,
+          controls,
+        )}
+      <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent side="left" className="topic-sidebar">
+          <SheetHeader>
+            <SheetTitle>{topic.title}</SheetTitle>
+            <SheetDescription>{topic.summary}</SheetDescription>
+          </SheetHeader>
+          <nav aria-label={`${topic.title} lessons`}>
+            {topic.lessons.map((lesson) => (
+              <LessonLink
+                key={lesson.href}
+                lesson={lesson}
+                active={location.pathname === lesson.href}
+              />
+            ))}
+          </nav>
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 
@@ -106,6 +163,89 @@ function modeLabel(mode: LessonMode) {
   return mode.replaceAll("-", " ");
 }
 
+function LessonPageContent({
+  title,
+  summary,
+  mode,
+  sources,
+  children,
+  currentHref,
+  previous,
+  next,
+}: {
+  title: string;
+  summary: string;
+  mode: LessonMode;
+  sources: readonly LessonSource[];
+  children: ReactNode;
+  currentHref: string;
+  previous?: DiscoveredLesson;
+  next?: DiscoveredLesson;
+}) {
+  const runtime = useLessonRuntime();
+  const complete = useLessonCompletion(currentHref);
+  const hasState = hasLessonState(currentHref);
+
+  return (
+    <article className="lesson-page">
+      <header className="lesson-header">
+        <div>
+          <h1>{title}</h1>
+          <p>{summary}</p>
+        </div>
+        <Badge variant="secondary">{modeLabel(mode)}</Badge>
+      </header>
+      <div className="lesson-content">{children}</div>
+      <SourcePanel sources={sources} />
+      <div className="lesson-completion">
+        <div>
+          <strong>
+            {complete
+              ? "Lesson complete"
+              : runtime.ready
+                ? "Ready to move on?"
+                : "Finish the required activities"}
+          </strong>
+          <span>Completion and solved activities stay on this device.</span>
+        </div>
+        <div className="lesson-completion-actions">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="ghost" disabled={!hasState}>
+                <RotateCcwIcon data-icon="inline-start" aria-hidden="true" />
+                Reset lesson
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset this lesson?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This clears solved activities, completion, editor drafts, debugger position,
+                  diagram layout, and revealed help for this lesson.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Keep progress</AlertDialogCancel>
+                <AlertDialogAction onClick={runtime.resetLesson}>Reset lesson</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button
+            type="button"
+            variant={complete ? "outline" : "default"}
+            disabled={!complete && !runtime.ready}
+            onClick={() => setLessonComplete(currentHref, !complete)}
+          >
+            <CheckIcon data-icon="inline-start" aria-hidden="true" />
+            {complete ? "Mark incomplete" : "Mark complete"}
+          </Button>
+        </div>
+      </div>
+      <LessonNavigation previous={previous} next={next} />
+    </article>
+  );
+}
+
 export function LessonPage({
   title,
   summary,
@@ -123,37 +263,19 @@ export function LessonPage({
   const location = useLocation();
   const index = topic.lessons.findIndex((lesson) => lesson.href === location.pathname);
   const currentHref = index >= 0 ? topic.lessons[index].href : location.pathname;
-  const complete = useLessonCompletion(currentHref);
-
   return (
-    <article className="lesson-page">
-      <header className="lesson-header">
-        <div>
-          <h1>{title}</h1>
-          <p>{summary}</p>
-        </div>
-        <Badge variant="secondary">{modeLabel(mode)}</Badge>
-      </header>
-      <div className="lesson-content">{children}</div>
-      <SourcePanel sources={sources} />
-      <div className="lesson-completion">
-        <div>
-          <strong>{complete ? "Lesson complete" : "Ready to move on?"}</strong>
-          <span>Completion is explicit and stays on this device.</span>
-        </div>
-        <Button
-          type="button"
-          variant={complete ? "outline" : "default"}
-          onClick={() => setLessonComplete(currentHref, !complete)}
-        >
-          <CheckIcon data-icon="inline-start" aria-hidden="true" />
-          {complete ? "Mark incomplete" : "Mark complete"}
-        </Button>
-      </div>
-      <LessonNavigation
+    <LessonRuntimeProvider href={currentHref}>
+      <LessonPageContent
+        title={title}
+        summary={summary}
+        mode={mode}
+        sources={sources}
+        currentHref={currentHref}
         previous={index > 0 ? topic.lessons[index - 1] : undefined}
         next={index >= 0 ? topic.lessons[index + 1] : undefined}
-      />
-    </article>
+      >
+        {children}
+      </LessonPageContent>
+    </LessonRuntimeProvider>
   );
 }

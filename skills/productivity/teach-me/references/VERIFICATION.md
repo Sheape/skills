@@ -1,25 +1,27 @@
 # Verification contract
 
-No lesson reaches the learner before all applicable checks pass.
+No lesson reaches the learner before every applicable check passes.
 
 ## Automated gate
 
-Run `vp check`, `vp test`, and `vp build`. Test each new interactive component with the smallest meaningful behavioral test. Verify deterministic calculations or authored case tables independently when a wrong value could teach the wrong model.
+Run `vp check`, `vp test`, and `vp build`. Test each new activity's wrong answer, correct answer, retry, first hint, second explanation, reset, keyboard path, and solved-state reload. Test debugger controls and cases, editor copy and reset, output labels, annotation focus, drawer behavior, completion gating, and semantic diagram relationships when present.
 
-## Browser gate
+Verify authored case tables, formulas, and deterministic calculations independently when a wrong value could teach the wrong model. Bundle-size and performance-score warnings do not fail the gate. A freeze, runaway animation, inaccessible control, broken interaction, clipping, or narrow-layout failure does.
 
-Start the production-equivalent app and open the exact `/<topic>/lesson-NNN` route. Test:
+## Ego-lite browser gate
+
+Start the production-equivalent app and use ego-lite to open the exact `/<topic>/lesson-NNN` route. This pass is mandatory for every lesson. Operate, rather than merely inspect:
 
 - every step and representative case forward and backward;
-- reset and repeatability;
+- wrong, hint, explanation, retry, correct, completion, local reset, and lesson reset paths;
+- debugger controls, case switching, scratchpad editing and copy controls, citations, annotations, drawer, and graph controls when present;
 - keyboard controls without hijacking inputs;
-- prediction, reveal, hint, answer, citations, and explicit completion when present;
-- topic/adjacent navigation and direct URL reload;
-- narrow viewport and no horizontal clipping;
-- system/light/dark theme, visible focus, and reduced motion;
-- console errors and failed resource requests.
+- topic and adjacent navigation plus direct URL reload;
+- system, light, dark, reduced motion, and a narrow viewport;
+- diagram fit, labels, connectors, overlaps, clipping, selection, movement, connection, and reset;
+- browser console and failed resource requests.
 
-Use the repository-mandated browser tooling. A screenshot is evidence of appearance, not evidence that interactions work.
+A screenshot proves appearance only. Interactions need an operated browser check. Fix every failure before recording a pass.
 
 ## Lesson record
 
@@ -48,9 +50,15 @@ Each lesson's `VERIFICATION.md` records:
 - Browser route: /topic/lesson-NNN
 - Browser interactions/viewports: ...
 
+## Diagram fidelity
+
+- Preserved relationships: ...
+- Merged or omitted: ...
+- Interaction/style adaptations: ...
+
 ## Limitations
 
 - None, or a precise boundary such as unavailable hardware.
 ```
 
-Write observed results, not intended checks. Fix failures before recording pass. After the gate is green, commit the complete lesson with a Conventional Commit message.
+Write observed results. Fix failures before recording pass. After the gate is green, commit the complete lesson with a Conventional Commit message.

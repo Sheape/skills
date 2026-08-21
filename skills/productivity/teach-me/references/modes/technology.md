@@ -10,7 +10,7 @@ Create a disposable verification project or environment and install the actual t
 
 ## Lesson shape
 
-Choose one mechanism, not a feature tour. Start with a prediction, then use an authored line-by-line trace or progressive system view. For code, show the active line and before/after phase; separate source, values, literal output, and conceptual flow.
+Choose one mechanism, not a feature tour. Start with a checkable prediction, then use an authored debugger trace or progressive system view. For code, show the active line and before or after phase; separate source, values, literal output, and conceptual flow.
 
 Cover three to five meaningful cases when behavior branches:
 

@@ -16,4 +16,4 @@ Keep three layers visibly distinct:
 - `inference`: consequences reasonably implied by it;
 - `critique`: gaps, alternatives, contradictions, or risks raised by the teaching agent.
 
-Use a system map, dependency graph, timeline, or state transition when it reduces prose. End with a decision exercise: prioritize a risk, repair a gap, predict a downstream consequence, or choose between documented tradeoffs.
+Use a system map, dependency graph, timeline, or state transition when it reduces prose. End with a checkable decision exercise: prioritize a risk from stable choices, repair an ordered gap, predict a downstream consequence, or choose between documented tradeoffs.
