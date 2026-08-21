@@ -299,6 +299,7 @@ describe("code runtime", () => {
   it("keeps an editable draft, labels output fidelity, copies, and resets", async () => {
     const user = userEvent.setup();
     const copy = vi.spyOn(navigator.clipboard, "writeText");
+    localStorage.setItem("teach-me:v1:theme", "dark");
     render(
       <Harness>
         <LessonPage title="Code" summary="Code" mode="technology" sources={[]}>
@@ -312,6 +313,7 @@ describe("code runtime", () => {
         </LessonPage>
       </Harness>,
     );
+    expect(document.querySelector(".cm-theme-dark")).toBeInTheDocument();
     expect(screen.getByText("Expected output")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Copy code" }));
     expect(copy).toHaveBeenCalledWith("console.log(1)");

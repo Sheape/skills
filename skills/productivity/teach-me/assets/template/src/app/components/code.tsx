@@ -360,6 +360,7 @@ export function CodeScratchpad({
   extensions?: ReactCodeMirrorProps["extensions"];
 }) {
   const runtime = useLessonRuntime();
+  const { theme } = useTheme();
   const [draft, setDraft] = useLessonStoredState(runtime.href, `scratchpad:${id}`, starter);
   const editorExtensions = extensions ?? [javascript({ jsx: true, typescript: true })];
   return (
@@ -389,6 +390,7 @@ export function CodeScratchpad({
         </header>
         <CodeMirror
           value={draft}
+          theme={theme}
           extensions={editorExtensions}
           onChange={setDraft}
           basicSetup={{ lineNumbers: true, foldGutter: false, highlightActiveLine: true }}

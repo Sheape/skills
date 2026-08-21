@@ -110,6 +110,10 @@
   --warning: #9a6700;
   --warning-soft: #fff8c5;
   --active-line: #dff7e8;
+  --code-background: #f7f7f5;
+  --code-foreground: #252422;
+  --code-gutter: #efeeec;
+  --code-active-line: #e3effb;
   --border: #dfddda;
   --input: #d7d4d0;
   --ring: #0075de;
@@ -148,6 +152,10 @@
   --warning: #f2cc60;
   --warning-soft: #332b00;
   --active-line: #0b3325;
+  --code-background: #111318;
+  --code-foreground: #d8dee9;
+  --code-gutter: #17191f;
+  --code-active-line: #17263a;
   --border: #2b2b2b;
   --input: #3a3a3a;
   --ring: #888888;
@@ -1090,8 +1098,8 @@
   margin: 0;
   padding: 0.75rem;
   border-radius: 0.5rem;
-  color: #d8dee9;
-  background: #111318;
+  color: var(--code-foreground);
+  background: var(--code-background);
   font-family: var(--font-mono);
   font-size: 0.75rem;
   line-height: 1.5;
@@ -1133,10 +1141,21 @@
   color: var(--muted-foreground);
   font-size: 0.75rem;
 }
-.cm-editor {
+.scratchpad .cm-editor {
   min-height: 19rem;
+  color: var(--code-foreground);
+  background: var(--code-background);
   font-family: var(--font-mono);
   font-size: 0.8125rem;
+}
+.scratchpad .cm-gutters {
+  color: var(--muted-foreground);
+  background: var(--code-gutter);
+  border-color: var(--border);
+}
+.scratchpad .cm-activeLine,
+.scratchpad .cm-activeLineGutter {
+  background: var(--code-active-line);
 }
 .cm-scroller {
   min-height: 19rem;
