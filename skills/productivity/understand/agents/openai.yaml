@@ -1,0 +1,6 @@
+interface:
+  display_name: "Understand"
+  short_description: "Walk code like a debugger, with real values drawn into a worktree"
+  default_prompt: "Use $understand to walk me through this codebase."
+policy:
+  allow_implicit_invocation: false
