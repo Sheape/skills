@@ -8,6 +8,7 @@ fail() {
   echo "test-e2e.sh: $*" >&2
   exit 1
 }
+has() { grep -qF -- "$2" <<<"$1"; }
 
 [[ $# -eq 1 ]] || fail "usage: test-e2e.sh <path/to/codelarpers>"
 bin="$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
@@ -29,6 +30,13 @@ cp -R "$skill_dir/assets/example-course/wc" "$CODELARPERS_HOME/courses/wc"
 
 echo "== validate"
 "$bin" dev validate wc --repeat 2
+echo "== validate: reject a near-miss the tests miss"
+nm="$CODELARPERS_HOME/courses/wc/stages/lc1/near-misses/python/no-bug"
+mkdir -p "$nm/app"
+cp "$CODELARPERS_HOME/courses/wc/solution/python/app/main.py" "$nm/app/main.py"
+if out="$("$bin" dev validate wc --stage lc1 2>&1)"; then fail "validate accepted a near-miss that passes its stage"; fi
+has "$out" "the tests miss this bug" || fail "validate did not name the uncaught near-miss: $out"
+rm -rf "$nm"
 echo "== publish"
 "$bin" dev publish wc
 
@@ -36,7 +44,6 @@ echo "== learner: clone, ping, fail"
 cd "$root"
 git clone -q "$CODELARPERS_HOME/repos/wc.git" codelarpers-wc
 cd codelarpers-wc
-has() { grep -qF -- "$2" <<<"$1"; }
 has "$("$bin" ping)" "Connection successful" || fail "ping did not link the repository"
 if "$bin" test >"$root/fail.log" 2>&1; then fail "starter code passed stage 1"; fi
 grep -q "Expected exit code 0, got: 1" "$root/fail.log" || fail "failure log lacks the expected mismatch line"

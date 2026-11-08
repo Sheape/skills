@@ -18,7 +18,7 @@ The tests are the teacher: the learner meets the subject through their failures.
 
 ## The bar: red, then green
 
-`codelarpers dev validate` proves each stage fails against the starter (red) and passes against `solution/` (green). Validation is the floor. A stage also needs:
+`codelarpers dev validate` proves each stage fails against the starter (red), fails against each of its [near-misses](COURSE-FORMAT.md#near-misses) (red), and passes against `solution/` (green). A near-miss that passes means the tests miss a plausible bug: add the case that catches it. Never weaken the near-miss to make validation pass. Validation is the floor. A stage also needs:
 
 - **Edge cases** from its Notes (empty input, missing trailing newline, multibyte text, the boundary value).
 - **Randomized inputs** whenever a fixed answer could be hard-coded. Use a script test with `random`; `validate --repeat 3` runs several seeds.
@@ -122,6 +122,6 @@ server.kill()
 ## Authoring loop
 
 - `codelarpers dev try <slug> <dir> --stage <id>` runs one stage against any directory (debug output on), for example a copy of the solution while you write it.
-- `codelarpers dev validate <slug> --stage <id>` validates up to that stage; `--keep` keeps the solution checkout for inspection.
+- `codelarpers dev validate <slug> --stage <id>` validates up to that stage; `--keep` keeps the solution and near-miss checkouts for inspection. Run `dev try` on a kept near-miss to see the cases it passes.
 - Reproduce a randomized failure with its seed (shown as `seed N` in debug output): `CODELARPERS_SEED=N codelarpers dev try <slug> <dir> --stage <id>`. The variable works for `validate` and the learner's `codelarpers test` too.
 - Timeouts: 10 seconds per program run by default (`timeout` in milliseconds for tests.json, seconds for the helper), 180 seconds per script.

@@ -185,16 +185,16 @@ enum Dev {
     },
     /// Static checks on a course's files
     Lint { course: String },
-    /// Lint, prove solution/ passes every stage, and prove the starter fails every stage
+    /// Lint, prove solution/ passes every stage, every near-miss fails only its own stage, and the starter fails every stage
     Validate {
         course: String,
         /// Only validate up to and including this stage
         #[arg(long)]
         stage: Option<String>,
-        /// Run the solution with this many random seeds
+        /// Run the solution and near-misses with this many random seeds
         #[arg(long, default_value_t = 1)]
         repeat: u32,
-        /// Keep the temporary solution checkout for inspection
+        /// Keep the temporary solution and near-miss checkouts for inspection
         #[arg(long)]
         keep: bool,
     },

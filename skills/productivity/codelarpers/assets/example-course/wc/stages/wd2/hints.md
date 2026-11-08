@@ -8,4 +8,4 @@ Splitting on a single space produces empty strings between repeated spaces. Look
 
 ## Almost there
 
-`\f` (form feed) and `\r` are whitespace too.
+`\f` (form feed) and `\r` are whitespace too. And an empty file has zero words: counting separators and adding one says it has one.

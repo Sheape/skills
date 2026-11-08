@@ -244,6 +244,23 @@ pub fn test_script(course: &Course, id: &str) -> Option<PathBuf> {
     ["test.py", "test.sh", "test.mjs", "test.js", "test"].iter().map(|f| dir.join(f)).find(|p| p.is_file())
 }
 
+/// A stage's near-misses for one language: `stages/<id>/near-misses/<lang>/<bug>/`. Each holds
+/// files laid over `solution/<lang>/` that add one plausible bug, so the stage's tests must fail it.
+pub fn near_misses(course: &Course, id: &str, lang: &str) -> Vec<(String, PathBuf)> {
+    let Ok(entries) = fs::read_dir(course.stage_dir(id).join("near-misses").join(lang)) else { return vec![] };
+    let mut out: Vec<(String, PathBuf)> = entries
+        .flatten()
+        .filter(|e| e.file_type().map(|t| t.is_dir()).unwrap_or(false))
+        .map(|e| (e.file_name().to_string_lossy().to_string(), e.path()))
+        .collect();
+    out.sort();
+    out
+}
+
+fn has_files(dir: &Path) -> bool {
+    fs::read_dir(dir).map(|it| it.flatten().any(|e| e.path().is_file() || has_files(&e.path()))).unwrap_or(false)
+}
+
 pub struct Lint {
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
@@ -386,6 +403,31 @@ pub fn lint(course: &Course) -> Lint {
             let ext = s.extension().map(|e| e.to_string_lossy().to_string()).unwrap_or_default();
             if ext.is_empty() && !is_executable(s) {
                 errors.push(format!("{label}: stages/{}/test must be executable", stage.id));
+            }
+        }
+        for lang in &course.languages {
+            if !course.dir.join("solution").join(lang).is_dir() {
+                continue;
+            }
+            let misses = near_misses(course, &stage.id, lang);
+            if misses.is_empty() {
+                errors.push(format!(
+                    "{label}: no near-miss for {lang}: add stages/{}/near-misses/{lang}/<bug>/ with solution files that carry one plausible bug",
+                    stage.id
+                ));
+            }
+            for (name, path) in &misses {
+                if !has_files(path) {
+                    errors.push(format!("{label}: near-miss {lang}/{name} has no files"));
+                }
+            }
+        }
+        if let Ok(entries) = fs::read_dir(dir.join("near-misses")) {
+            for e in entries.flatten() {
+                let lang = e.file_name().to_string_lossy().to_string();
+                if !course.languages.contains(&lang) {
+                    warnings.push(format!("{label}: near-misses/{lang}/ is not a course language"));
+                }
             }
         }
         if !dir.join("hints.md").is_file() {

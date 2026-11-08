@@ -23,7 +23,7 @@ For `hello world\n` it expects:
 2 input.txt
 ```
 
-The tester also checks tabs, repeated spaces and blank lines.
+The tester also checks tabs, repeated spaces, blank lines and an empty file.
 
 ### Notes
 

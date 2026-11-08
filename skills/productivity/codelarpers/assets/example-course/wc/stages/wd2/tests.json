@@ -17,6 +17,12 @@
       "files": { "input.txt": "a\tb\nc\r\nd\fe" },
       "args": ["-w", "input.txt"],
       "expect": { "exitCode": 0, "stdout": "5 input.txt\n" }
+    },
+    {
+      "name": "empty file",
+      "files": { "input.txt": "" },
+      "args": ["-w", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "0 input.txt\n" }
     }
   ]
 }

@@ -223,5 +223,8 @@ pub fn new_stage(course_slug: &str, name: &str, difficulty: &str, extension: Opt
     let tests = json!({ "cases": [{ "name": "<what this case proves>", "args": ["<command>"], "files": {}, "expect": { "exitCode": 0, "stdout": "<expected>\n" } }] });
     write_file(&dir.join("tests.json"), &format!("{}\n", serde_json::to_string_pretty(&tests)?), false)?;
     fs::create_dir_all(dir.join("examples"))?;
+    for lang in &course.languages {
+        fs::create_dir_all(dir.join("near-misses").join(lang))?;
+    }
     Ok((stage, dir))
 }

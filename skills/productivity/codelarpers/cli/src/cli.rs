@@ -5,7 +5,7 @@ use crate::paths::{self, tilde, web_url};
 use crate::progress::{Event, append_event, derive, read_events, stage_worth};
 use crate::repo::{self, find_repo_root, init_repo, materialise, read_config, repo_initialized};
 use crate::tester::{self, LogLine, Logger, format_line, run_stage, run_tests};
-use crate::util::{bold, cyan, git, gray, green, now_iso, red, write_json, yellow};
+use crate::util::{bold, copy_dir, cyan, git, gray, green, now_iso, red, write_json, yellow};
 use anyhow::{Context, Result, anyhow, bail};
 use serde_json::json;
 use std::fs::{self, OpenOptions};
@@ -456,6 +456,66 @@ fn prove_solution(course: &Course, lang: &str, stages: &[&Stage], repeat: u32, k
     Ok(Some(true))
 }
 
+/// Every near-miss must compile, pass the stages before its own, and fail its own stage on every seed.
+fn prove_near_misses(course: &Course, lang: &str, stages: &[&Stage], repeat: u32, keep: bool) -> Result<bool> {
+    let solution = course.dir.join("solution").join(lang);
+    let seeds: Vec<u64> = (0..repeat.max(1)).map(|r| tester::default_seed().wrapping_add(r as u64 * 7919)).collect();
+    let (mut caught, mut ok) = (0, true);
+    for (i, stage) in stages.iter().enumerate() {
+        for (name, overlay) in course::near_misses(course, &stage.id, lang) {
+            let work = repo::temp_dir("codelarpers-near-miss")?;
+            materialise(course, lang, &solution, &work)?;
+            copy_dir(&overlay, &work)?;
+            let log = Logger::new(true, false, None);
+            let verdict = near_miss_verdict(course, &stages[..=i], &work, &log, &seeds);
+            if keep {
+                println!("{}", gray(&format!("  kept {}", work.display())));
+            } else {
+                let _ = fs::remove_dir_all(&work);
+            }
+            match verdict {
+                Ok(()) => caught += 1,
+                Err((msg, show_log)) => {
+                    ok = false;
+                    println!("{}", red(&format!("  ✗ near-miss {}/{lang}/{name} {msg}", stage.id)));
+                    if show_log {
+                        tail(&log.snapshot(), 20);
+                    }
+                }
+            }
+        }
+    }
+    if ok && caught > 0 {
+        let s = if seeds.len() > 1 { format!(" × {} seeds", seeds.len()) } else { String::new() };
+        println!("{}", green(&format!("  ✓ {caught} near-miss(es) for {lang} each fail only their own stage{s}")));
+    }
+    Ok(ok)
+}
+
+/// `stages` ends with the near-miss's own stage. Err carries the reason and whether the log helps.
+fn near_miss_verdict(course: &Course, stages: &[&Stage], work: &Path, log: &Logger, seeds: &[u64]) -> Result<(), (String, bool)> {
+    let (own, earlier) = stages.split_last().expect("at least the near-miss's own stage");
+    if tester::compile(work, log) == Some(false) {
+        return Err(("doesn't compile: a near-miss is a working program with one bug".into(), true));
+    }
+    for (r, &seed) in seeds.iter().enumerate() {
+        let run = if seeds.len() > 1 { format!(" (seed {}/{})", r + 1, seeds.len()) } else { String::new() };
+        for s in earlier {
+            if !run_stage(course, s, work, log, false, seed).passed {
+                return Err((format!("fails earlier stage #{}{run}: it should break only #{}", s.id, own.id), true));
+            }
+        }
+        let outcome = run_stage(course, own, work, log, false, seed);
+        if outcome.tester_error {
+            return Err((format!("crashes the tester at #{}{run}: the test must fail it cleanly", own.id), true));
+        }
+        if outcome.passed {
+            return Err((format!("passes #{}{run}: the tests miss this bug; add a case that catches it", own.id), false));
+        }
+    }
+    Ok(())
+}
+
 fn prove_starter_fails(course: &Course, lang: &str, stages: &[&Stage]) -> Result<bool> {
     let work = repo::temp_dir("codelarpers-starter")?;
     materialise(course, lang, &course.dir.join("starters").join(lang), &work)?;
@@ -505,7 +565,8 @@ pub fn dev_validate(slug: &str, stage: Option<String>, repeat: u32, keep: bool) 
     for lang in &course.languages {
         match prove_solution(&course, lang, &stages, repeat, keep)? {
             None => println!("{}", yellow(&format!("  ! no solution/{lang}; passability unproven"))),
-            Some(passed) => ok &= passed,
+            Some(false) => ok = false,
+            Some(true) => ok &= prove_near_misses(&course, lang, &stages, repeat, keep)?,
         }
         ok &= prove_starter_fails(&course, lang, &stages)?;
     }

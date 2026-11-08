@@ -44,7 +44,7 @@ codelarpers dev new-course <slug> --name "Build your own <X>" --short "<one line
 codelarpers dev new-stage <slug> --name "<capability>" --difficulty easy [--extension <ext>]
 ```
 
-Give the challenge its logo: the studied project's own mark for `codebase` (`codelarpers dev find-icon --project "$PWD"` ranks candidates), the technology's official logo for `tutorial`, installed with `codelarpers dev set-icon`. With no fitting logo, leave it: the app draws letters. Fill every scaffolded file; leftover placeholders fail lint. Each stage gets instructions that teach the concept and pin the exact input and output, tests that stay red until the capability exists, a hint ladder, resources, and code examples. Code examples are always real code someone shipped: the studied codebase's own code for `codebase`, professional open-source code for `tutorial`. `solution/<lang>/` is one cumulative reference implementation; the starter holds only build plumbing and an entry point.
+Give the challenge its logo: the studied project's own mark for `codebase` (`codelarpers dev find-icon --project "$PWD"` ranks candidates), the technology's official logo for `tutorial`, installed with `codelarpers dev set-icon`. With no fitting logo, leave it: the app draws letters. Fill every scaffolded file; leftover placeholders fail lint. Each stage gets instructions that teach the concept and pin the exact input and output, tests that stay red until the capability exists, a hint ladder, resources, code examples, and at least one near-miss: the solution with the stage's most likely bug, which its tests must catch. Code examples are always real code someone shipped: the studied codebase's own code for `codebase`, professional open-source code for `tutorial`. `solution/<lang>/` is one cumulative reference implementation; the starter holds only build plumbing and an entry point.
 
 ## 6. Prove it
 
@@ -52,7 +52,7 @@ Give the challenge its logo: the studied project's own mark for `codebase` (`cod
 codelarpers dev validate <slug> --repeat 3
 ```
 
-Done when it prints `Valid.`: lint clean, the solution **green** on every stage across three seeds, the starter **red** on every stage. Then `codelarpers dev publish <slug>` creates the learner's repository.
+Done when it prints `Valid.`: lint clean, the solution **green** on every stage across three seeds, every near-miss **red** on its own stage across those seeds and green before it, the starter **red** on every stage. When a near-miss passes, add the test case that catches it. Then `codelarpers dev publish <slug>` creates the learner's repository.
 
 ## 7. Check it in the browser
 

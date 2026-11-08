@@ -67,6 +67,7 @@ courses/<slug>/
     resources.md       links, free to open
     examples/NN-*.md   code examples, gated
     assets/            images used by instructions.md (relative paths)
+    near-misses/<lang>/<bug>/  the solution with one plausible bug (author-only; never served)
 ```
 
 ## Logo
@@ -173,6 +174,16 @@ One paragraph: what to notice, and how it maps to what the learner just built.
 
 The starter compiles, writes "Logs from your program will appear here!" to stderr and exits non-zero, so every stage starts red. The solution keeps the starter's structure and implements every stage. `codelarpers.yml` is added at publish time; leave it out of both.
 
+## Near-misses
+
+A near-miss is the solution with the bug a learner is most likely to ship for this stage: the gotcha the last hint names, an off-by-one, an edge case from the Notes. It proves the tests catch that bug. Put it in `stages/<id>/near-misses/<lang>/<bug>/`, named after the bug (`counts-unterminated-last-line`). Inside, copy only the solution files you change, at their solution paths (`app/main.py`). `dev validate` copies `solution/<lang>/`, lays these files over it, and requires the result to:
+
+- compile, so it fails because of the bug and not a typo
+- pass every earlier stage, so the bug belongs to this stage
+- fail this stage on every seed of `--repeat`, so the tests catch the bug every time, not by luck
+
+Lint requires at least one near-miss per stage for each language that has a solution. The learner never sees them: the app serves only `assets/` folders.
+
 ## Extending a published challenge
 
-Add stages with `dev new-stage` (`--after <id>` to insert) and extensions with `dev new-extension`, extend `solution/<lang>/` to pass them, and validate again. The learner's repository already exists, and their current stage moves on to the new stages by itself.
+Add stages with `dev new-stage` (`--after <id>` to insert) and extensions with `dev new-extension`, extend `solution/<lang>/` to pass them, give each new stage its near-misses, and validate again. The learner's repository already exists, and their current stage moves on to the new stages by itself.

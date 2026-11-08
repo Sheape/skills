@@ -33,6 +33,7 @@ Base stages are the shortest path to a working core. Extensions are optional dee
 - State the capability and its exact contract, then explain the concept (format, rule, algorithm idea) with a worked example whose values differ from the test inputs.
 - Give the learner everything needed to derive every check; give them none of the code.
 - Hints climb a ladder: a question that points at the concept, then the specific rule, then the gotcha. Struggle is the method; a hint should cost a little and unblock a lot.
+- The gotcha in the last hint is the stage's near-miss. Write that bug into `near-misses/` so validation proves the tests catch it ([COURSE-FORMAT.md](COURSE-FORMAT.md#near-misses)).
 
 ## Calibrating with learner evidence
 
