@@ -1,0 +1,50 @@
+{
+  "slug": "wc",
+  "name": "Build your own wc",
+  "short": "Learn about lines, words, bytes and streaming input",
+  "kind": "tutorial",
+  "languages": [
+    "python"
+  ],
+  "created": "2026-11-08",
+  "icon": "icon.svg",
+  "iconBackground": "#ffffff",
+  "source": {
+    "subject": "The POSIX wc utility"
+  },
+  "extensions": [
+    {
+      "slug": "stdin",
+      "name": "Standard input",
+      "description": "Count text piped in when no file is given."
+    }
+  ],
+  "stages": [
+    {
+      "id": "lc1",
+      "name": "Count lines",
+      "difficulty": "very_easy"
+    },
+    {
+      "id": "wd2",
+      "name": "Count words",
+      "difficulty": "easy"
+    },
+    {
+      "id": "bt3",
+      "name": "Count bytes",
+      "difficulty": "easy"
+    },
+    {
+      "id": "df4",
+      "name": "Default output",
+      "difficulty": "medium"
+    },
+    {
+      "id": "si5",
+      "name": "Read from standard input",
+      "difficulty": "easy",
+      "extension": "stdin"
+    }
+  ]
+}

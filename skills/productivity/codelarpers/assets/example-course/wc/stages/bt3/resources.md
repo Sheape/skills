@@ -1,0 +1,2 @@
+- [UTF-8 (Wikipedia)](https://en.wikipedia.org/wiki/UTF-8#Encoding) — how many bytes each code point takes
+- [`open()` modes](https://docs.python.org/3/library/functions.html#open) — text versus binary mode

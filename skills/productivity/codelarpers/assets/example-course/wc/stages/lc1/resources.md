@@ -1,0 +1,2 @@
+- [POSIX `wc`](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/wc.html) — the specification, including how lines are defined
+- [`sys.argv`](https://docs.python.org/3/library/sys.html#sys.argv) — reading command-line arguments in Python

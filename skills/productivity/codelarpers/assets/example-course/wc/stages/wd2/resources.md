@@ -1,0 +1,1 @@
+- [`bytes.split()`](https://docs.python.org/3/library/stdtypes.html#bytes.split) — how splitting with no separator treats whitespace runs

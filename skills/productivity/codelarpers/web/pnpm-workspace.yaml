@@ -1,0 +1,3 @@
+# esbuild ships prebuilt platform binaries; Vite 8 builds without its postinstall.
+allowBuilds:
+  esbuild: false

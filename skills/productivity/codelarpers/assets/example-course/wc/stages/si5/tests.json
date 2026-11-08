@@ -1,0 +1,16 @@
+{
+  "cases": [
+    {
+      "name": "lines from stdin",
+      "args": ["-l"],
+      "stdin": "apple\nbanana\n",
+      "expect": { "exitCode": 0, "stdout": "2\n" }
+    },
+    {
+      "name": "default counts from stdin",
+      "args": [],
+      "stdin": "one two\n",
+      "expect": { "exitCode": 0, "stdout": "1 2 8\n" }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+- [`sys.stdin`](https://docs.python.org/3/library/sys.html#sys.stdin) — and its `.buffer` for raw bytes

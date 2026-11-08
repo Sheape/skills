@@ -1,0 +1,1 @@
+- [POSIX `wc` STDOUT section](https://pubs.opengroup.org/onlinepubs/9799919799/utilities/wc.html#tag_20_143_10) — the default output order

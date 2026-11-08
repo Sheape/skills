@@ -1,0 +1,6 @@
+interface:
+  display_name: "CodeLarpers"
+  short_description: "Turn a codebase or topic into a local code-it-yourself challenge"
+  default_prompt: "Use $codelarpers to build me a challenge for learning this codebase."
+policy:
+  allow_implicit_invocation: false

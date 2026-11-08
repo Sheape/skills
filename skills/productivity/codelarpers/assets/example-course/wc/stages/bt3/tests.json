@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "ascii",
+      "files": { "input.txt": "hello\n" },
+      "args": ["-c", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "6 input.txt\n" }
+    },
+    {
+      "name": "two-byte character",
+      "files": { "input.txt": "héllo\n" },
+      "args": ["-c", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "7 input.txt\n" }
+    },
+    {
+      "name": "four-byte emoji",
+      "files": { "input.txt": "ok 👍\n" },
+      "args": ["-c", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "8 input.txt\n" }
+    }
+  ]
+}

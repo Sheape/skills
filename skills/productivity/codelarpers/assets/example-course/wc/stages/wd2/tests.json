@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "two words",
+      "files": { "input.txt": "hello world\n" },
+      "args": ["-w", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "2 input.txt\n" }
+    },
+    {
+      "name": "repeated whitespace",
+      "files": { "input.txt": "  leading   and trailing  \n\n" },
+      "args": ["-w", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "3 input.txt\n" }
+    },
+    {
+      "name": "tabs and newlines",
+      "files": { "input.txt": "a\tb\nc\r\nd\fe" },
+      "args": ["-w", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "5 input.txt\n" }
+    }
+  ]
+}

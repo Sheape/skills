@@ -1,0 +1,22 @@
+{
+  "cases": [
+    {
+      "name": "three lines",
+      "files": { "input.txt": "apple\nbanana\ncherry\n" },
+      "args": ["-l", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "3 input.txt\n" }
+    },
+    {
+      "name": "last line without a newline",
+      "files": { "input.txt": "apple\nbanana" },
+      "args": ["-l", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "1 input.txt\n" }
+    },
+    {
+      "name": "empty file",
+      "files": { "input.txt": "" },
+      "args": ["-l", "input.txt"],
+      "expect": { "exitCode": 0, "stdout": "0 input.txt\n" }
+    }
+  ]
+}

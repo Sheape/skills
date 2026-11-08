@@ -1,0 +1,104 @@
+# Builds the codelarper binary (CLI + test harness + embedded web UI) for each
+# supported target and keeps it as a workflow artifact. The codelarpers skill's
+# scripts/install.sh downloads the latest successful run's artifact from main.
+name: codelarper
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "skills/productivity/codelarpers/**"
+      - ".github/workflows/codelarper.yml"
+  pull_request:
+    paths:
+      - "skills/productivity/codelarpers/**"
+      - ".github/workflows/codelarper.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: codelarper-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SKILL: skills/productivity/codelarpers
+  CARGO_TERM_COLOR: always
+
+jobs:
+  web:
+    name: Web UI
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: ${{ env.SKILL }}/web/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: ${{ env.SKILL }}/web/pnpm-lock.yaml
+      - name: Install
+        working-directory: ${{ env.SKILL }}/web
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck and build
+        working-directory: ${{ env.SKILL }}/web
+        run: pnpm build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: web-dist
+          path: ${{ env.SKILL }}/web/dist
+          retention-days: 1
+          if-no-files-found: error
+
+  binary:
+    name: codelarper (${{ matrix.target }})
+    needs: web
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            run: true
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            run: false
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            run: true
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm
+            run: true
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: web-dist
+          path: ${{ env.SKILL }}/web/dist
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ env.SKILL }}/cli
+          key: ${{ matrix.target }}
+      - name: Unit tests
+        if: matrix.run
+        working-directory: ${{ env.SKILL }}/cli
+        run: cargo test --locked --target ${{ matrix.target }}
+      - name: Build
+        working-directory: ${{ env.SKILL }}/cli
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: End-to-end test (example course)
+        if: matrix.run
+        run: ${{ env.SKILL }}/scripts/test-e2e.sh ${{ env.SKILL }}/cli/target/${{ matrix.target }}/release/codelarper
+      - uses: actions/upload-artifact@v7
+        with:
+          name: codelarper-${{ matrix.target }}
+          path: ${{ env.SKILL }}/cli/target/${{ matrix.target }}/release/codelarper
+          retention-days: 90
+          if-no-files-found: error
