@@ -1,7 +1,7 @@
-"""Helpers for codelarper stage test scripts (test.py).
+"""Helpers for codelarpers stage test scripts (test.py).
 
 The harness runs a stage's test.py with this module on PYTHONPATH. Everything here
-prints the codelarper line protocol on stdout:
+prints the codelarpers line protocol on stdout:
 
     plain text      -> [tester::#ID] text
     "$ cmd"         -> [tester::#ID] $ cmd          (command style)
@@ -12,7 +12,7 @@ prints the codelarper line protocol on stdout:
 
 Exit 0 = stage passed, exit 1 = learner's code failed, anything else = bug in the test.
 
-    from codelarper_test import *
+    from codelarpers_test import *
 
     d = tmpdir({"input.txt": "a b c\\n"})
     r = run(["count", "input.txt"], cwd=d)
@@ -35,13 +35,13 @@ import threading
 import time
 import traceback
 
-PROGRAM = os.environ.get("CODELARPER_PROGRAM", "./your_program.sh")
-STAGE = os.environ.get("CODELARPER_STAGE", "")
-STAGE_DIR = os.environ.get("CODELARPER_STAGE_DIR", ".")
-COURSE_DIR = os.environ.get("CODELARPER_COURSE_DIR", ".")
-REPO = os.environ.get("CODELARPER_REPO", ".")
-SEED = int(os.environ.get("CODELARPER_SEED", "0") or 0) or int(time.time())
-DEBUG = os.environ.get("CODELARPER_DEBUG") == "1"
+PROGRAM = os.environ.get("CODELARPERS_PROGRAM", "./your_program.sh")
+STAGE = os.environ.get("CODELARPERS_STAGE", "")
+STAGE_DIR = os.environ.get("CODELARPERS_STAGE_DIR", ".")
+COURSE_DIR = os.environ.get("CODELARPERS_COURSE_DIR", ".")
+REPO = os.environ.get("CODELARPERS_REPO", ".")
+SEED = int(os.environ.get("CODELARPERS_SEED", "0") or 0) or int(time.time())
+DEBUG = os.environ.get("CODELARPERS_DEBUG") == "1"
 
 _lock = threading.Lock()
 _tmpdirs = []
@@ -89,7 +89,7 @@ def q(value):
 
 
 class Random(_random.Random):
-    """Seeded by CODELARPER_SEED. int(a, b) includes both ends; string() defaults to a-z."""
+    """Seeded by CODELARPERS_SEED. int(a, b) includes both ends; string() defaults to a-z."""
 
     def word(self):
         return self.choice(WORDS)
@@ -112,7 +112,7 @@ random = Random(SEED)
 
 def tmpdir(files=None):
     """A fresh scratch directory, optionally pre-filled with {relative_path: str|bytes}."""
-    d = tempfile.mkdtemp(prefix="codelarper-")
+    d = tempfile.mkdtemp(prefix="codelarpers-")
     _tmpdirs.append(d)
     for rel, content in (files or {}).items():
         path = os.path.join(d, rel)

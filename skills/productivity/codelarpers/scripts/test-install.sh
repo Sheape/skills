@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Drives the real install.sh against a fake `gh` that serves a fake codelarper artifact.
+# Drives the real install.sh against a fake `gh` that serves a fake codelarpers artifact.
 # Checks: artifact install, idempotent rerun, version-mismatch refusal, server start.
 set -euo pipefail
 
@@ -25,11 +25,11 @@ case "$1 $2" in
   "run download")
     dir="${@: -1}"
     mkdir -p "$dir"
-    cat >"$dir/codelarper" <<FAKE
+    cat >"$dir/codelarpers" <<FAKE
 #!/usr/bin/env bash
-echo "codelarper \$*" >>"$CALLS"
+echo "codelarpers \$*" >>"$CALLS"
 case "\$1" in
-  --version) echo "codelarper $FAKE_VERSION" ;;
+  --version) echo "codelarpers $FAKE_VERSION" ;;
   dev) echo "/fake/home" ;;
   serve) echo "Started: http://localhost:7357" ;;
 esac
@@ -40,12 +40,12 @@ esac
 EOF
 chmod +x "$root/fakebin/gh"
 export PATH="$root/fakebin:$PATH"
-export CODELARPER_BIN_DIR="$root/bin"
+export CODELARPERS_BIN_DIR="$root/bin"
 
 out="$("$skill_dir/scripts/install.sh")"
-grep -q "Downloaded codelarper $want" <<<"$out" || fail "first run did not install from the artifact: $out"
-[[ -x "$root/bin/codelarper" ]] || fail "binary not installed"
-grep -q "codelarper serve --detach" "$CALLS" || fail "server was not started"
+grep -q "Downloaded codelarpers $want" <<<"$out" || fail "first run did not install from the artifact: $out"
+[[ -x "$root/bin/codelarpers" ]] || fail "binary not installed"
+grep -q "codelarpers serve --detach" "$CALLS" || fail "server was not started"
 
 : >"$CALLS"
 out="$("$skill_dir/scripts/install.sh")"
@@ -53,8 +53,8 @@ grep -q "up to date" <<<"$out" || fail "second run was not idempotent: $out"
 ! grep -q "run download" "$CALLS" || fail "second run downloaded again"
 
 export FAKE_VERSION="0.0.0-old"
-if out="$(CODELARPER_FORCE=1 "$skill_dir/scripts/install.sh" artifact 2>&1)"; then fail "accepted a mismatched artifact"; fi
+if out="$(CODELARPERS_FORCE=1 "$skill_dir/scripts/install.sh" artifact 2>&1)"; then fail "accepted a mismatched artifact"; fi
 grep -q "expects $want" <<<"$out" || fail "mismatch message missing: $out"
-[[ "$("$root/bin/codelarper" --version)" == "codelarper $want" ]] || fail "a failed install replaced the working binary"
+[[ "$("$root/bin/codelarpers" --version)" == "codelarpers $want" ]] || fail "a failed install replaced the working binary"
 
 echo "install ok"

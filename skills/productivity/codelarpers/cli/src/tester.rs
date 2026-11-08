@@ -20,7 +20,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-pub const PYTHON_HELPER: &str = include_str!("tester/codelarper_test.py");
+pub const PYTHON_HELPER: &str = include_str!("tester/codelarpers_test.py");
 
 #[derive(Serialize, Clone, Debug)]
 pub struct LogLine {
@@ -209,7 +209,7 @@ impl Ctx<'_> {
     }
 
     fn tmpdir(&mut self, files: Option<&Value>) -> Result<PathBuf, String> {
-        let dir = temp_dir("codelarper-test").map_err(|e| e.to_string())?;
+        let dir = temp_dir("codelarpers-test").map_err(|e| e.to_string())?;
         self.tmp.push(dir.clone());
         if let Some(Value::Object(map)) = files {
             for (rel, content) in map {
@@ -337,7 +337,7 @@ pub struct StageOutcome {
 
 pub fn ensure_python_helper() -> PathBuf {
     let dir = paths::lib_dir();
-    let file = dir.join("codelarper_test.py");
+    let file = dir.join("codelarpers_test.py");
     if fs::read_to_string(&file).ok().as_deref() != Some(PYTHON_HELPER) {
         let _ = fs::create_dir_all(&dir);
         let _ = fs::write(&file, PYTHON_HELPER);
@@ -372,14 +372,14 @@ fn run_script(ctx: &mut Ctx, course: &Course, stage: &Stage, script: &Path, repo
         _ => lib.display().to_string(),
     };
     cmd.current_dir(&tmp)
-        .env("CODELARPER_PROGRAM", &ctx.run_sh)
-        .env("CODELARPER_REPO", repo_root)
-        .env("CODELARPER_STAGE", &stage.id)
-        .env("CODELARPER_STAGE_DIR", course.stage_dir(&stage.id))
-        .env("CODELARPER_COURSE_DIR", &course.dir)
-        .env("CODELARPER_SEED", seed.to_string())
-        .env("CODELARPER_TMP", &tmp)
-        .env("CODELARPER_DEBUG", if debug { "1" } else { "0" })
+        .env("CODELARPERS_PROGRAM", &ctx.run_sh)
+        .env("CODELARPERS_REPO", repo_root)
+        .env("CODELARPERS_STAGE", &stage.id)
+        .env("CODELARPERS_STAGE_DIR", course.stage_dir(&stage.id))
+        .env("CODELARPERS_COURSE_DIR", &course.dir)
+        .env("CODELARPERS_SEED", seed.to_string())
+        .env("CODELARPERS_TMP", &tmp)
+        .env("CODELARPERS_DEBUG", if debug { "1" } else { "0" })
         .env("PYTHONPATH", pythonpath)
         .env("PYTHONUNBUFFERED", "1")
         .env("PYTHONDONTWRITEBYTECODE", "1");
@@ -421,7 +421,7 @@ fn run_script(ctx: &mut Ctx, course: &Course, stage: &Stage, script: &Path, repo
 
 pub fn run_stage(course: &Course, stage: &Stage, repo_root: &Path, log: &Logger, debug: bool, seed: u64) -> StageOutcome {
     let prefix = format!("tester::#{}", stage.id.to_uppercase());
-    let mut ctx = Ctx { prefix: prefix.clone(), run_sh: repo_root.join(".codelarper/run.sh"), log, tmp: vec![] };
+    let mut ctx = Ctx { prefix: prefix.clone(), run_sh: repo_root.join(".codelarpers/run.sh"), log, tmp: vec![] };
     ctx.say(&format!("Running tests for Stage #{} ({})", stage.id.to_uppercase(), stage.name), "heading");
     let dir = course.stage_dir(&stage.id);
     let mut result: Result<(), (String, bool)> = Ok(());
@@ -456,9 +456,9 @@ pub fn run_stage(course: &Course, stage: &Stage, repo_root: &Path, log: &Logger,
     }
 }
 
-/// Run `.codelarper/compile.sh` if present. `None` when there is nothing to compile.
+/// Run `.codelarpers/compile.sh` if present. `None` when there is nothing to compile.
 pub fn compile(repo_root: &Path, log: &Logger) -> Option<bool> {
-    let script = repo_root.join(".codelarper/compile.sh");
+    let script = repo_root.join(".codelarpers/compile.sh");
     if !script.is_file() {
         return None;
     }
@@ -487,7 +487,7 @@ pub struct RunResult {
 }
 
 pub fn default_seed() -> u64 {
-    std::env::var("CODELARPER_SEED")
+    std::env::var("CODELARPERS_SEED")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or_else(|| crate::util::Rng::from_time().next() % 1_000_000_007)
@@ -496,8 +496,8 @@ pub fn default_seed() -> u64 {
 /// Compile once, then run `stages` in order, stopping at the first failure.
 pub fn run_tests(course: &Course, stages: &[&Stage], repo_root: &Path, log: &Logger, debug: bool, seed: u64) -> RunResult {
     let first = stages.first().map(|s| s.id.clone());
-    if !repo_root.join(".codelarper/run.sh").is_file() {
-        log.line("tester", "Missing .codelarper/run.sh in your repository.", "error");
+    if !repo_root.join(".codelarpers/run.sh").is_file() {
+        log.line("tester", "Missing .codelarpers/run.sh in your repository.", "error");
         return RunResult { failed_stage: first, ..Default::default() };
     }
     match compile(repo_root, log) {

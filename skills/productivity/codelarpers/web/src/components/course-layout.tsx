@@ -273,7 +273,7 @@ function RightPanel({ course }: { course: CourseDetail }) {
 export function runState(course: CourseDetail, run: Run | null) {
   if (!run || run.status === "idle" || run.stage !== course.currentStageId) return { tone: "idle", text: "Ready to run tests" } as const;
   if (run.status === "running") return { tone: "running", text: "Running tests…" } as const;
-  if (run.status === "passed") return { tone: "passed", text: run.mode === "submit" ? "Tests passed" : "Tests passed — run codelarper submit" } as const;
+  if (run.status === "passed") return { tone: "passed", text: run.mode === "submit" ? "Tests passed" : "Tests passed — run codelarpers submit" } as const;
   return { tone: "failed", text: "Tests failed" } as const;
 }
 
@@ -320,7 +320,7 @@ function LogsDrawer({ run, onClose }: { run: Run | null; onClose: () => void }) 
         <div className="rounded-sm border border-line bg-panel py-3 font-mono text-[13px] leading-[1.6]">
           {!run || run.lines.length === 0 ? (
             <p className="px-4 text-ink-3">
-              No test runs yet. Run <span className="text-ink">codelarper test</span> in your repository and the logs stream in here.
+              No test runs yet. Run <span className="text-ink">codelarpers test</span> in your repository and the logs stream in here.
             </p>
           ) : (
             run.lines.map((l, i) => (
@@ -364,7 +364,7 @@ export function CourseLayout() {
   const { data: course, error, reload } = useApi<CourseDetail>(`/api/courses/${slug}`);
   const { data: run } = useApi<Run>(`/api/courses/${slug}/run`);
   const [logsOpen, setLogsOpen] = useState(false);
-  const [collapsed, setCollapsedState] = useState(() => readStore("codelarper:sidebar-collapsed", "0") === "1");
+  const [collapsed, setCollapsedState] = useState(() => readStore("codelarpers:sidebar-collapsed", "0") === "1");
   const seenRun = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!run) return;
@@ -372,7 +372,7 @@ export function CourseLayout() {
     seenRun.current = run.id ?? "";
   }, [run]);
   const setCollapsed = (v: boolean) => {
-    writeStore("codelarper:sidebar-collapsed", v ? "1" : "0");
+    writeStore("codelarpers:sidebar-collapsed", v ? "1" : "0");
     setCollapsedState(v);
   };
   if (error) return <ErrorState message={error.message} />;

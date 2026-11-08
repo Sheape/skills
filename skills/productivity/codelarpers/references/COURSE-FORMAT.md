@@ -5,12 +5,12 @@ Every file an author writes, and where the app shows it. A complete worked examp
 ## Data directory
 
 ```text
-~/.local/share/codelarper/          ($CODELARPER_HOME overrides)
+~/.local/share/codelarpers/          ($CODELARPERS_HOME overrides)
   courses/<slug>/                   you write these
   repos/<slug>.git                  the learner's local remote; `dev publish` creates it
   progress/<slug>/events.jsonl      the learner's history; append-only, never edit
   runs/<slug>/latest.json           last test run, shown in the Logs drawer
-  lib/codelarper_test.py            Python test helper, written by the harness
+  lib/codelarpers_test.py            Python test helper, written by the harness
 ```
 
 The catalog lists courses oldest first by `created`, so the third project's challenge is the third card.
@@ -60,7 +60,7 @@ courses/<slug>/
   starters/<lang>/     the learner's initial repository
   solution/<lang>/     cumulative reference solution (author-only; never served)
   stages/<id>/
-    instructions.md    the stage page's "Your Task" card and `codelarper task`
+    instructions.md    the stage page's "Your Task" card and `codelarpers task`
     tests.json         declarative cases          } at least one of these;
     test.py            scripted test (or .sh/.mjs) } see TESTS.md
     hints.md           the hint ladder
@@ -73,12 +73,12 @@ courses/<slug>/
 
 Every challenge shows its subject's real logo, found in this order:
 
-1. **Codebase: the project's own mark.** `codelarper dev find-icon --project <dir>` ranks images the README shows, files named logo, icon or brand (the project's own, full-colour, square variants first), and the GitHub owner's avatar. Open the top candidates (Read shows images) and pick the square mark; skip wordmarks and screenshots.
+1. **Codebase: the project's own mark.** `codelarpers dev find-icon --project <dir>` ranks images the README shows, files named logo, icon or brand (the project's own, full-colour, square variants first), and the GitHub owner's avatar. Open the top candidates (Read shows images) and pick the square mark; skip wordmarks and screenshots.
 2. **Tutorial, or a codebase with no logo: the technology's official logo.** [devicon](https://devicon.dev) has full-colour SVGs for most languages and tools, at `https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/<name>/<name>-original.svg`. Otherwise use the logo from the project's official site or repository.
 3. **Nothing fits: leave `icon` unset.** The app draws a two-letter tile from the subject ("rustc lexer" becomes RL). Never draw a logo yourself.
 
 ```bash
-codelarper dev set-icon <slug> <file-or-url> [--background "#ffffff"]
+codelarpers dev set-icon <slug> <file-or-url> [--background "#ffffff"]
 ```
 
 `set-icon` copies a file or downloads a URL (svg, png, webp, jpg, gif or ico, under 1.5 MB), stores it as `icon.<ext>` and updates `course.json`. A logo that is black, dark or single-colour disappears on one of the two themes: pass `--background` with a contrasting colour to draw it on a tile. Check the catalog card in both themes in step 7.
@@ -166,12 +166,12 @@ One paragraph: what to notice, and how it maps to what the learner just built.
 
 | file | purpose |
 | -- | -- |
-| `.codelarper/compile.sh` | optional; runs once per test run from the repository root |
-| `.codelarper/run.sh` | required and executable; runs the program for every test from a temporary directory, so it must not depend on the working directory |
+| `.codelarpers/compile.sh` | optional; runs once per test run from the repository root |
+| `.codelarpers/run.sh` | required and executable; runs the program for every test from a temporary directory, so it must not depend on the working directory |
 | `your_program.sh` | runs compile then run locally |
 | `README.md` | entry point and the test/submit loop |
 
-The starter compiles, writes "Logs from your program will appear here!" to stderr and exits non-zero, so every stage starts red. The solution keeps the starter's structure and implements every stage. `codelarper.yml` is added at publish time; leave it out of both.
+The starter compiles, writes "Logs from your program will appear here!" to stderr and exits non-zero, so every stage starts red. The solution keeps the starter's structure and implements every stage. `codelarpers.yml` is added at publish time; leave it out of both.
 
 ## Extending a published challenge
 

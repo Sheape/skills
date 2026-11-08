@@ -1,4 +1,4 @@
-//! Embed the built web UI (`../web/dist`, or `$CODELARPER_WEB_DIST`) into the binary.
+//! Embed the built web UI (`../web/dist`, or `$CODELARPERS_WEB_DIST`) into the binary.
 //! Without a built UI the binary still compiles, serving a page that says how to build it.
 
 use std::env;
@@ -26,8 +26,8 @@ fn copy_dir(from: &Path, to: &Path) {
 fn main() {
     let out = PathBuf::from(env::var("OUT_DIR").unwrap()).join("web");
     let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
-    let dist = env::var("CODELARPER_WEB_DIST").map(PathBuf::from).unwrap_or_else(|_| manifest.join("../web/dist"));
-    println!("cargo:rerun-if-env-changed=CODELARPER_WEB_DIST");
+    let dist = env::var("CODELARPERS_WEB_DIST").map(PathBuf::from).unwrap_or_else(|_| manifest.join("../web/dist"));
+    println!("cargo:rerun-if-env-changed=CODELARPERS_WEB_DIST");
     println!("cargo:rerun-if-changed={}", dist.display());
     let _ = fs::remove_dir_all(&out);
     if dist.join("index.html").is_file() {

@@ -206,16 +206,16 @@ export function SetupPage() {
             <Step n={1} done={course.setupDone} title="Clone the repository">
               <CommandBox icon={<Terminal className="size-3.5 text-ink-4" />} variants={[{ label: "command line", lines: [`git clone ${course.repo.path} ${dir}`, `cd ${dir}`] }]} />
               <p className="mt-2 text-[13px] text-ink-4">
-                This is a local Git remote on your machine. <code className="font-mono">codelarper submit</code> pushes your work to it.
+                This is a local Git remote on your machine. <code className="font-mono">codelarpers submit</code> pushes your work to it.
               </p>
             </Step>
             <Step n={2} done={course.setupDone} title="Test CLI connection">
-              <CommandBox variants={[{ label: "codelarper cli", lines: ["codelarper ping # Run inside the cloned repository"] }]} />
+              <CommandBox variants={[{ label: "codelarpers cli", lines: ["codelarpers ping # Run inside the cloned repository"] }]} />
               {course.setupDone ? (
                 course.progress.pingCwd && <p className="mt-2 text-[13px] text-ink-4">Linked {course.progress.pingCwd}</p>
               ) : (
                 <p className="mt-3 flex items-center gap-2 text-[14px] text-ink-3">
-                  <RunDot tone="running" /> Listening for <code className="font-mono">codelarper ping</code>…
+                  <RunDot tone="running" /> Listening for <code className="font-mono">codelarpers ping</code>…
                 </p>
               )}
             </Step>
@@ -402,8 +402,8 @@ export function StagePage() {
             <p className="mb-3 text-ink-2">To run tests, make changes to your code and run the submit command:</p>
             <CommandBox
               variants={[
-                { label: "submit", lines: ["codelarper submit # Commit, then run tests"] },
-                { label: "test only", lines: ["codelarper test # Run tests without committing"] },
+                { label: "submit", lines: ["codelarpers submit # Commit, then run tests"] },
+                { label: "test only", lines: ["codelarpers test # Run tests without committing"] },
               ]}
             />
           </Step>

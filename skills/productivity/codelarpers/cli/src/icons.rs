@@ -201,7 +201,7 @@ fn sniff(bytes: &[u8]) -> Option<&'static str> {
 pub fn set_icon(course: &mut Course, source: &str, background: Option<String>) -> Result<PathBuf> {
     let tmp;
     let file: PathBuf = if source.starts_with("http://") || source.starts_with("https://") {
-        tmp = crate::repo::temp_dir("codelarper-icon")?;
+        tmp = crate::repo::temp_dir("codelarpers-icon")?;
         let dest = tmp.join("download");
         let ok = std::process::Command::new("curl").args(["-fsSL", "--max-time", "30", "-o"]).arg(&dest).arg(source).status()?.success();
         if !ok {

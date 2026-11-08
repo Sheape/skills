@@ -274,11 +274,11 @@ pub fn lint(course: &Course) -> Lint {
         if !starter.is_dir() {
             errors.push(format!("missing starter: starters/{lang}/"));
         } else {
-            let run = starter.join(".codelarper/run.sh");
+            let run = starter.join(".codelarpers/run.sh");
             if !run.is_file() {
-                errors.push(format!("starters/{lang}/.codelarper/run.sh is required"));
+                errors.push(format!("starters/{lang}/.codelarpers/run.sh is required"));
             } else if !is_executable(&run) {
-                errors.push(format!("starters/{lang}/.codelarper/run.sh must be executable"));
+                errors.push(format!("starters/{lang}/.codelarpers/run.sh must be executable"));
             }
             if !starter.join("your_program.sh").is_file() {
                 errors.push(format!("starters/{lang}/your_program.sh is required"));
@@ -292,7 +292,7 @@ pub fn lint(course: &Course) -> Lint {
         }
     }
     match &course.icon {
-        None => warnings.push("no icon: the catalog falls back to letters (see `codelarper dev find-icon`)".into()),
+        None => warnings.push("no icon: the catalog falls back to letters (see `codelarpers dev find-icon`)".into()),
         Some(icon) if !course.dir.join(icon).is_file() => errors.push(format!("icon \"{icon}\" does not exist")),
         Some(icon) => {
             let ext = Path::new(icon).extension().map(|e| e.to_string_lossy().to_lowercase()).unwrap_or_default();

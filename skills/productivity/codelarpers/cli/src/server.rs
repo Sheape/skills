@@ -1,4 +1,4 @@
-//! `codelarper serve`: the embedded web UI plus a small JSON API over the data directory.
+//! `codelarpers serve`: the embedded web UI plus a small JSON API over the data directory.
 
 use crate::course::{self, Course, Stage, language_name};
 use crate::paths;
@@ -151,7 +151,7 @@ fn course_detail(course: &Course) -> Value {
         "repo": {
             "path": paths::repo_path(&course.slug),
             "display": paths::tilde(&paths::repo_path(&course.slug)),
-            "cloneDir": format!("codelarper-{}", course.slug),
+            "cloneDir": format!("codelarpers-{}", course.slug),
         },
     });
     if let (Value::Object(a), Value::Object(b)) = (&mut v, extra) {
@@ -229,7 +229,7 @@ fn timeline(courses: &[Course]) -> Vec<Value> {
 }
 
 async fn health(Ext(app): Ext<App>) -> ApiResult {
-    ok_json(json!({ "app": "codelarper", "build": app.build, "home": paths::home(), "pid": std::process::id() }))
+    ok_json(json!({ "app": "codelarpers", "build": app.build, "home": paths::home(), "pid": std::process::id() }))
 }
 
 async fn meta(Ext(app): Ext<App>) -> ApiResult {
@@ -399,7 +399,7 @@ async fn static_files(uri: Uri) -> Response {
     }
     match Assets::get("index.html") {
         Some(index) => ([(header::CONTENT_TYPE, "text/html; charset=utf-8".to_string()), (header::CACHE_CONTROL, "no-store".to_string())], index.data.into_owned()).into_response(),
-        None => (StatusCode::INTERNAL_SERVER_ERROR, "codelarper UI is missing from this build").into_response(),
+        None => (StatusCode::INTERNAL_SERVER_ERROR, "codelarpers UI is missing from this build").into_response(),
     }
 }
 
@@ -475,7 +475,7 @@ pub async fn serve(port: u16, build: String) -> Result<()> {
         .fallback(static_files)
         .with_state(app);
     let listener = tokio::net::TcpListener::bind(("127.0.0.1", port)).await?;
-    println!("codelarper listening on http://localhost:{port} (home {})", paths::home().display());
+    println!("codelarpers listening on http://localhost:{port} (home {})", paths::home().display());
     axum::serve(listener, router).await?;
     Ok(())
 }

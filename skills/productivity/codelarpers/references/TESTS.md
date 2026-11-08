@@ -4,7 +4,7 @@ The tests are the teacher: the learner meets the subject through their failures.
 
 ## How a run works
 
-`codelarper test` (or `submit`) finds `codelarper.yml`, runs `.codelarper/compile.sh` once (`[compile]` lines), then runs each stage:
+`codelarpers test` (or `submit`) finds `codelarpers.yml`, runs `.codelarpers/compile.sh` once (`[compile]` lines), then runs each stage:
 
 ```text
 [tester::#BT3] Running tests for Stage #BT3 (Count bytes)
@@ -18,7 +18,7 @@ The tests are the teacher: the learner meets the subject through their failures.
 
 ## The bar: red, then green
 
-`codelarper dev validate` proves each stage fails against the starter (red) and passes against `solution/` (green). Validation is the floor. A stage also needs:
+`codelarpers dev validate` proves each stage fails against the starter (red) and passes against `solution/` (green). Validation is the floor. A stage also needs:
 
 - **Edge cases** from its Notes (empty input, missing trailing newline, multibyte text, the boundary value).
 - **Randomized inputs** whenever a fixed answer could be hard-coded. Use a script test with `random`; `validate --repeat 3` runs several seeds.
@@ -60,12 +60,12 @@ The harness runs it from a scratch directory with:
 
 | variable | value |
 | -- | -- |
-| `CODELARPER_PROGRAM` | the learner's `.codelarper/run.sh` |
-| `CODELARPER_REPO` | the learner's repository root |
-| `CODELARPER_STAGE`, `CODELARPER_STAGE_DIR`, `CODELARPER_COURSE_DIR` | stage id and folders (read fixtures from `CODELARPER_STAGE_DIR`) |
-| `CODELARPER_SEED` | seed for randomness; set it yourself to reproduce a run |
-| `CODELARPER_TMP` | the scratch directory, removed afterwards |
-| `CODELARPER_DEBUG` | `1` when the learner set `debug: true` |
+| `CODELARPERS_PROGRAM` | the learner's `.codelarpers/run.sh` |
+| `CODELARPERS_REPO` | the learner's repository root |
+| `CODELARPERS_STAGE`, `CODELARPERS_STAGE_DIR`, `CODELARPERS_COURSE_DIR` | stage id and folders (read fixtures from `CODELARPERS_STAGE_DIR`) |
+| `CODELARPERS_SEED` | seed for randomness; set it yourself to reproduce a run |
+| `CODELARPERS_TMP` | the scratch directory, removed afterwards |
+| `CODELARPERS_DEBUG` | `1` when the learner set `debug: true` |
 
 The script talks to the harness through stdout, one line at a time:
 
@@ -80,10 +80,10 @@ The script talks to the harness through stdout, one line at a time:
 
 Exit `0` passes, `1` fails (the learner's code is wrong), anything else is reported as a tester bug, with the script's stderr. Any language works; the Python helper below speaks the protocol for you.
 
-## Python helper: `codelarper_test`
+## Python helper: `codelarpers_test`
 
 ```python
-from codelarper_test import *
+from codelarpers_test import *
 
 for case in range(3):
     words = random.words(random.int(2, 6))
@@ -109,7 +109,7 @@ for case in range(3):
 A server stage, for example:
 
 ```python
-from codelarper_test import *
+from codelarpers_test import *
 
 port = random.int(20000, 40000)
 server = spawn(["--port", str(port)])
@@ -121,7 +121,7 @@ server.kill()
 
 ## Authoring loop
 
-- `codelarper dev try <slug> <dir> --stage <id>` runs one stage against any directory (debug output on), for example a copy of the solution while you write it.
-- `codelarper dev validate <slug> --stage <id>` validates up to that stage; `--keep` keeps the solution checkout for inspection.
-- Reproduce a randomized failure with its seed (shown as `seed N` in debug output): `CODELARPER_SEED=N codelarper dev try <slug> <dir> --stage <id>`. The variable works for `validate` and the learner's `codelarper test` too.
+- `codelarpers dev try <slug> <dir> --stage <id>` runs one stage against any directory (debug output on), for example a copy of the solution while you write it.
+- `codelarpers dev validate <slug> --stage <id>` validates up to that stage; `--keep` keeps the solution checkout for inspection.
+- Reproduce a randomized failure with its seed (shown as `seed N` in debug output): `CODELARPERS_SEED=N codelarpers dev try <slug> <dir> --stage <id>`. The variable works for `validate` and the learner's `codelarpers test` too.
 - Timeouts: 10 seconds per program run by default (`timeout` in milliseconds for tests.json, seconds for the helper), 180 seconds per script.

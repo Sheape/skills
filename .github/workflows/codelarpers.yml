@@ -1,25 +1,25 @@
-# Builds the codelarper binary (CLI + test harness + embedded web UI) for each
+# Builds the codelarpers binary (CLI + test harness + embedded web UI) for each
 # supported target and keeps it as a workflow artifact. The codelarpers skill's
 # scripts/install.sh downloads the latest successful run's artifact from main.
-name: codelarper
+name: codelarpers
 
 on:
   push:
     branches: [main]
     paths:
       - "skills/productivity/codelarpers/**"
-      - ".github/workflows/codelarper.yml"
+      - ".github/workflows/codelarpers.yml"
   pull_request:
     paths:
       - "skills/productivity/codelarpers/**"
-      - ".github/workflows/codelarper.yml"
+      - ".github/workflows/codelarpers.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: codelarper-${{ github.ref }}
+  group: codelarpers-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -54,7 +54,7 @@ jobs:
           if-no-files-found: error
 
   binary:
-    name: codelarper (${{ matrix.target }})
+    name: codelarpers (${{ matrix.target }})
     needs: web
     strategy:
       fail-fast: false
@@ -95,10 +95,10 @@ jobs:
         run: cargo build --release --locked --target ${{ matrix.target }}
       - name: End-to-end test (example course)
         if: matrix.run
-        run: ${{ env.SKILL }}/scripts/test-e2e.sh ${{ env.SKILL }}/cli/target/${{ matrix.target }}/release/codelarper
+        run: ${{ env.SKILL }}/scripts/test-e2e.sh ${{ env.SKILL }}/cli/target/${{ matrix.target }}/release/codelarpers
       - uses: actions/upload-artifact@v7
         with:
-          name: codelarper-${{ matrix.target }}
-          path: ${{ env.SKILL }}/cli/target/${{ matrix.target }}/release/codelarper
+          name: codelarpers-${{ matrix.target }}
+          path: ${{ env.SKILL }}/cli/target/${{ matrix.target }}/release/codelarpers
           retention-days: 90
           if-no-files-found: error

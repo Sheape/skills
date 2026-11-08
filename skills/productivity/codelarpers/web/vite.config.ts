@@ -3,8 +3,8 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
-// `pnpm dev` proxies the API to a running `codelarper serve` (CODELARPER_PORT, default 7357).
-const port = process.env.CODELARPER_PORT || "7357";
+// `pnpm dev` proxies the API to a running `codelarpers serve` (CODELARPERS_PORT, default 7357).
+const port = process.env.CODELARPERS_PORT || "7357";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],

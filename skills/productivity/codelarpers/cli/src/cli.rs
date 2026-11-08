@@ -26,11 +26,11 @@ struct RepoCtx {
 fn course_from_repo() -> Result<RepoCtx> {
     let cwd = std::env::current_dir()?;
     let root = find_repo_root(&cwd).ok_or_else(|| {
-        anyhow!("Not inside a codelarper repository (no codelarper.yml found).\nClone your repository from the challenge's Local Setup page, then run this inside it.")
+        anyhow!("Not inside a codelarpers repository (no codelarpers.yml found).\nClone your repository from the challenge's Local Setup page, then run this inside it.")
     })?;
     let config = read_config(&root)?;
     let course = course::load_course(&config.course)
-        .ok_or_else(|| anyhow!("codelarper.yml points at \"{}\", which isn't in {}", config.course, tilde(&paths::courses_dir())))?;
+        .ok_or_else(|| anyhow!("codelarpers.yml points at \"{}\", which isn't in {}", config.course, tilde(&paths::courses_dir())))?;
     Ok(RepoCtx { root, debug: config.debug, language: config.language, course })
 }
 
@@ -86,7 +86,7 @@ fn commit_and_push(root: &Path, message: &str) -> Result<()> {
         let has_name = !String::from_utf8_lossy(&git(&["config", "user.name"], Some(root))?.stdout).trim().is_empty();
         let mut args: Vec<&str> = vec![];
         if !has_name {
-            args.extend(["-c", "user.name=codelarper", "-c", "user.email=codelarper@localhost"]);
+            args.extend(["-c", "user.name=codelarpers", "-c", "user.email=codelarpers@localhost"]);
         }
         args.extend(["commit", "-q", "-m", message]);
         let out = git(&args, Some(root))?;
@@ -161,7 +161,7 @@ pub fn test(submit: bool, previous: bool, message: &str) -> Result<()> {
     }
     if !submit {
         println!("{}", green("Test passed. Congrats!"));
-        println!("Run {} to complete stage #{}.", cyan("codelarper submit"), current.id.to_uppercase());
+        println!("Run {} to complete stage #{}.", cyan("codelarpers submit"), current.id.to_uppercase());
         return Ok(());
     }
     let worth = stage_worth(current, &derive(course).stage(&current.id));
@@ -172,7 +172,7 @@ pub fn test(submit: bool, previous: bool, message: &str) -> Result<()> {
             "\nNext up: #{} {}. Run {} or open {}",
             next.id.to_uppercase(),
             next.name,
-            cyan("codelarper task"),
+            cyan("codelarpers task"),
             url(&format!("/courses/{}/stages/{}", course.slug, next.id))
         ),
         None => println!("{}", green(&format!("\nYou've completed {}! 🎉", course.name))),
@@ -283,7 +283,7 @@ fn health(port: u16) -> Option<serde_json::Value> {
 
 fn stop_server(port: u16) -> Result<bool> {
     let Some(h) = health(port) else { return Ok(false) };
-    if h["app"] != "codelarper" {
+    if h["app"] != "codelarpers" {
         bail!("port {port} is used by another program");
     }
     if let Some(pid) = h["pid"].as_u64() {
@@ -303,11 +303,11 @@ fn stop_server(port: u16) -> Result<bool> {
 pub fn ensure_server(port: u16, restart: bool) -> Result<(String, bool)> {
     let base = web_url(port, "");
     if let Some(h) = health(port) {
-        if h["app"] != "codelarper" {
-            bail!("port {port} is in use by another program; set CODELARPER_PORT");
+        if h["app"] != "codelarpers" {
+            bail!("port {port} is in use by another program; set CODELARPERS_PORT");
         }
         if h["home"].as_str() != Some(&paths::home().display().to_string()) {
-            bail!("port {port} serves another codelarper home ({}); set CODELARPER_PORT", h["home"]);
+            bail!("port {port} serves another codelarpers home ({}); set CODELARPERS_PORT", h["home"]);
         }
         if h["build"] == build_id() && !restart {
             return Ok((base, false));
@@ -435,7 +435,7 @@ fn prove_solution(course: &Course, lang: &str, stages: &[&Stage], repeat: u32, k
         return Ok(None);
     }
     for r in 0..repeat.max(1) {
-        let work = repo::temp_dir("codelarper-solution")?;
+        let work = repo::temp_dir("codelarpers-solution")?;
         materialise(course, lang, &src, &work)?;
         let log = Logger::new(true, false, None);
         let result = run_tests(course, stages, &work, &log, false, tester::default_seed().wrapping_add(r as u64 * 7919));
@@ -457,7 +457,7 @@ fn prove_solution(course: &Course, lang: &str, stages: &[&Stage], repeat: u32, k
 }
 
 fn prove_starter_fails(course: &Course, lang: &str, stages: &[&Stage]) -> Result<bool> {
-    let work = repo::temp_dir("codelarper-starter")?;
+    let work = repo::temp_dir("codelarpers-starter")?;
     materialise(course, lang, &course.dir.join("starters").join(lang), &work)?;
     let log = Logger::new(true, false, None);
     let compiled = tester::compile(&work, &log).unwrap_or(true);

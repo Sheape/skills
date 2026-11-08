@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { readStore, writeStore } from "./format";
 
 export type ThemePref = "system" | "light" | "dark";
-const KEY = "codelarper:theme";
+const KEY = "codelarpers:theme";
 
 function apply(pref: ThemePref) {
   const dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);

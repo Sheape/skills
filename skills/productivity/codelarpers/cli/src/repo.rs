@@ -1,4 +1,4 @@
-//! The learner's repository: `codelarper.yml` plus a local bare "remote" per course.
+//! The learner's repository: `codelarpers.yml` plus a local bare "remote" per course.
 
 use crate::course::Course;
 use crate::paths;
@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-pub const CONFIG_FILE: &str = "codelarper.yml";
+pub const CONFIG_FILE: &str = "codelarpers.yml";
 
 pub fn repo_initialized(slug: &str) -> bool {
     paths::repo_path(slug).join("HEAD").exists()
@@ -21,11 +21,11 @@ pub fn config_text(course: &Course, language: &str) -> String {
     )
 }
 
-/// Copy `source` to `dest` as a ready-to-test working copy (adds codelarper.yml, fixes modes).
+/// Copy `source` to `dest` as a ready-to-test working copy (adds codelarpers.yml, fixes modes).
 pub fn materialise(course: &Course, language: &str, source: &Path, dest: &Path) -> Result<()> {
     copy_dir(source, dest)?;
     fs::write(dest.join(CONFIG_FILE), config_text(course, language))?;
-    for rel in ["your_program.sh", ".codelarper/run.sh", ".codelarper/compile.sh"] {
+    for rel in ["your_program.sh", ".codelarpers/run.sh", ".codelarpers/compile.sh"] {
         let f = dest.join(rel);
         if f.exists() {
             set_executable(&f)?;
@@ -54,13 +54,13 @@ pub fn init_repo(course: &Course, language: &str) -> Result<PathBuf> {
     if !starter.is_dir() {
         bail!("missing starter {}", starter.display());
     }
-    let work = temp_dir("codelarper-init")?;
+    let work = temp_dir("codelarpers-init")?;
     let result = (|| -> Result<()> {
         materialise(course, language, &starter, &work)?;
-        let id = ["-c", "user.name=codelarper", "-c", "user.email=codelarper@localhost"];
+        let id = ["-c", "user.name=codelarpers", "-c", "user.email=codelarpers@localhost"];
         git_ok(&["init", "-q", "-b", "main"], Some(&work))?;
         git_ok(&["add", "-A"], Some(&work))?;
-        git_ok(&[id[0], id[1], id[2], id[3], "commit", "-q", "-m", "init [codelarper]"], Some(&work))?;
+        git_ok(&[id[0], id[1], id[2], id[3], "commit", "-q", "-m", "init [codelarpers]"], Some(&work))?;
         fs::create_dir_all(paths::repos_dir())?;
         git_ok(&["clone", "-q", "--bare", &work.to_string_lossy(), &bare.to_string_lossy()], None)?;
         Ok(())
@@ -91,7 +91,7 @@ pub fn read_config(root: &Path) -> Result<RepoConfig> {
     })
 }
 
-/// Walk up from `start` to the directory holding codelarper.yml.
+/// Walk up from `start` to the directory holding codelarpers.yml.
 pub fn find_repo_root(start: &Path) -> Option<PathBuf> {
     let mut dir = paths::absolute(start);
     loop {

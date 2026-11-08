@@ -1,13 +1,13 @@
-//! Where codelarper keeps its persistent data. One home per user, shared by every project.
+//! Where codelarpers keeps its persistent data. One home per user, shared by every project.
 
 use std::env;
 use std::path::{Path, PathBuf};
 
 pub const DEFAULT_PORT: u16 = 7357;
 
-/// `$CODELARPER_HOME`, else `${XDG_DATA_HOME:-~/.local/share}/codelarper`.
+/// `$CODELARPERS_HOME`, else `${XDG_DATA_HOME:-~/.local/share}/codelarpers`.
 pub fn home() -> PathBuf {
-    if let Ok(h) = env::var("CODELARPER_HOME") {
+    if let Ok(h) = env::var("CODELARPERS_HOME") {
         if !h.is_empty() {
             return absolute(Path::new(&h));
         }
@@ -17,7 +17,7 @@ pub fn home() -> PathBuf {
         .filter(|s| !s.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| user_home().join(".local").join("share"));
-    data.join("codelarper")
+    data.join("codelarpers")
 }
 
 pub fn user_home() -> PathBuf {
@@ -61,7 +61,7 @@ pub fn latest_run_file(slug: &str) -> PathBuf {
 }
 
 pub fn port() -> u16 {
-    env::var("CODELARPER_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(DEFAULT_PORT)
+    env::var("CODELARPERS_PORT").ok().and_then(|p| p.parse().ok()).unwrap_or(DEFAULT_PORT)
 }
 
 pub fn web_url(port: u16, path: &str) -> String {

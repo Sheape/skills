@@ -1,4 +1,4 @@
-from codelarper_test import *
+from codelarpers_test import *
 
 for case in range(3):
     lines = [" ".join(random.words(random.int(1, 5))) for _ in range(random.int(1, 6))]

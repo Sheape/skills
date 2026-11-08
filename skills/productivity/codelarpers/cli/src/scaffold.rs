@@ -1,4 +1,4 @@
-//! `codelarper dev new-*`: course, extension and stage skeletons with build plumbing per language.
+//! `codelarpers dev new-*`: course, extension and stage skeletons with build plumbing per language.
 
 use crate::course::{self, Course, DIFFICULTIES, Extension, KINDS, Source, Stage, language_name};
 use crate::paths;
@@ -16,8 +16,8 @@ struct Kit {
 }
 
 fn kit(slug: &str, lang: &str) -> Kit {
-    let build = format!("/tmp/codelarper-build-{slug}-{lang}");
-    let bin = format!("codelarper-{slug}");
+    let build = format!("/tmp/codelarpers-build-{slug}-{lang}");
+    let bin = format!("codelarpers-{slug}");
     match lang {
         "rust" => Kit {
             entry: "src/main.rs",
@@ -83,14 +83,14 @@ fn kit(slug: &str, lang: &str) -> Kit {
             entry: "(your choice)",
             files: vec![],
             compile: Some(format!("# Build your {} program here. It runs from the repository root.", language_name(other))),
-            run: format!("echo \"Edit .codelarper/run.sh to start your {} program\" >&2\nexit 1", language_name(other)),
+            run: format!("echo \"Edit .codelarpers/run.sh to start your {} program\" >&2\nexit 1", language_name(other)),
         },
     }
 }
 
 fn script(what: &str, body: &str) -> String {
     format!(
-        "#!/bin/sh\n#\n# {what}\n#\n# The tester runs .codelarper/compile.sh once from the repository root, then\n# .codelarper/run.sh for every test from a temporary working directory.\n\nset -e\n\n{body}\n"
+        "#!/bin/sh\n#\n# {what}\n#\n# The tester runs .codelarpers/compile.sh once from the repository root, then\n# .codelarpers/run.sh for every test from a temporary working directory.\n\nset -e\n\n{body}\n"
     )
 }
 
@@ -100,21 +100,21 @@ pub fn write_starter(dir: &Path, course: &Course, lang: &str) -> Result<()> {
         write_file(&dir.join(rel), content, false)?;
     }
     if let Some(c) = &k.compile {
-        write_file(&dir.join(".codelarper/compile.sh"), &script("Compiles your program. Runs once per test run.", c), true)?;
+        write_file(&dir.join(".codelarpers/compile.sh"), &script("Compiles your program. Runs once per test run.", c), true)?;
     }
-    write_file(&dir.join(".codelarper/run.sh"), &script("Runs your program. Must work from any working directory.", &k.run), true)?;
-    let compile_line = if k.compile.is_some() { "\"$dir/.codelarper/compile.sh\"\n" } else { "" };
+    write_file(&dir.join(".codelarpers/run.sh"), &script("Runs your program. Must work from any working directory.", &k.run), true)?;
+    let compile_line = if k.compile.is_some() { "\"$dir/.codelarpers/compile.sh\"\n" } else { "" };
     write_file(
         &dir.join("your_program.sh"),
         &format!(
-            "#!/bin/sh\n#\n# Use this script to run your program LOCALLY: ./your_program.sh <args>\n#\n# It mirrors .codelarper/compile.sh and .codelarper/run.sh, which the tester uses.\n\nset -e\n\ndir=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n{compile_line}exec \"$dir/.codelarper/run.sh\" \"$@\"\n"
+            "#!/bin/sh\n#\n# Use this script to run your program LOCALLY: ./your_program.sh <args>\n#\n# It mirrors .codelarpers/compile.sh and .codelarpers/run.sh, which the tester uses.\n\nset -e\n\ndir=\"$(cd \"$(dirname \"$0\")\" && pwd)\"\n{compile_line}exec \"$dir/.codelarpers/run.sh\" \"$@\"\n"
         ),
         true,
     )?;
     write_file(
         &dir.join("README.md"),
         &format!(
-            "# {name} — {lang_name}\n\nThis repository is your workspace for the **{name}** challenge on codelarpers.\n\nYour program's entry point is `{entry}`.\n\n1. `codelarper task` prints the current stage's instructions (or open the web UI with `codelarper open`).\n2. Implement the stage. `./your_program.sh <args>` runs your program locally.\n3. `codelarper test` runs the current stage's tests without committing.\n4. `codelarper submit` commits your work and runs the tests. Passing completes the stage.\n\nFailing is part of the method: read the test log, form a hypothesis, change one thing, rerun.\n",
+            "# {name} — {lang_name}\n\nThis repository is your workspace for the **{name}** challenge on codelarpers.\n\nYour program's entry point is `{entry}`.\n\n1. `codelarpers task` prints the current stage's instructions (or open the web UI with `codelarpers open`).\n2. Implement the stage. `./your_program.sh <args>` runs your program locally.\n3. `codelarpers test` runs the current stage's tests without committing.\n4. `codelarpers submit` commits your work and runs the tests. Passing completes the stage.\n\nFailing is part of the method: read the test log, form a hypothesis, change one thing, rerun.\n",
             name = course.name,
             lang_name = language_name(lang),
             entry = k.entry
@@ -195,7 +195,7 @@ pub fn new_stage(course_slug: &str, name: &str, difficulty: &str, extension: Opt
     }
     if let Some(ext) = &extension {
         if !course.extensions.iter().any(|e| &e.slug == ext) {
-            bail!("no extension \"{ext}\"; add it with `codelarper dev new-extension`");
+            bail!("no extension \"{ext}\"; add it with `codelarpers dev new-extension`");
         }
     }
     let taken: Vec<String> = course.stages.iter().map(|s| s.id.clone()).collect();

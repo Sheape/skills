@@ -5,7 +5,7 @@ import { useApi, type CourseSummary } from "@/lib/api";
 import { plural, readStore, writeStore } from "@/lib/format";
 import { CourseIcon, ErrorState, Loading, Modal, ProgressRing } from "@/components/ui";
 
-const DISMISS = "codelarper:start-here-dismissed";
+const DISMISS = "codelarpers:start-here-dismissed";
 
 function CourseCard({ c }: { c: CourseSummary }) {
   const started = c.started || c.completed > 0;
@@ -54,7 +54,7 @@ export function HowItWorks() {
   const steps = [
     ["A project becomes a challenge", "Run /codelarpers in any project. An agent studies that codebase or topic and turns it into a roadmap of small stages. Each project gets its own challenge, score and history."],
     ["Every stage is code you write", "Instructions explain the concept and the exact input and output. No stage passes by reading: you implement it in your own repository."],
-    ["The tests are the teacher", "codelarper test runs the stage's tests locally; codelarper submit commits and, on a pass, completes the stage. Fail, read the log, fix, rerun."],
+    ["The tests are the teacher", "codelarpers test runs the stage's tests locally; codelarpers submit commits and, on a pass, completes the stage. Fail, read the log, fix, rerun."],
     ["Points reward struggle", "Failed attempts cost nothing. Each hint costs 10% of the stage's points; peeking at code examples before passing costs 50%."],
   ];
   return (

@@ -36,7 +36,7 @@ Base stages are the shortest path to a working core. Extensions are optional dee
 
 ## Calibrating with learner evidence
 
-When extending, read `codelarper dev progress <slug>`:
+When extending, read `codelarpers dev progress <slug>`:
 
 - Many attempts and hints on a stage: make the next stages smaller, or insert a bridging stage before the hard one with `--after`.
 - Repeated `too_easy` ratings: merge steps and raise difficulty.

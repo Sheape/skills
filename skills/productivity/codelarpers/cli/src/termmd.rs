@@ -1,4 +1,4 @@
-//! Render challenge markdown for a terminal (`codelarper task`).
+//! Render challenge markdown for a terminal (`codelarpers task`).
 
 use crate::util::{bold, cyan, gray};
 use regex::Regex;

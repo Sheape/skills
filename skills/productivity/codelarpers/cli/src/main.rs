@@ -15,16 +15,16 @@ use std::path::PathBuf;
 
 const EXAMPLES: &str = "\
 EXAMPLES:
-  $ codelarper submit            # Commit changes & run tests
-  $ codelarper submit -m \"msg\"   # Commit changes & run tests with a custom commit message
-  $ codelarper test              # Run tests without committing changes
-  $ codelarper test --previous   # Run tests for all previous stages and the current stage
-  $ codelarper task              # View current stage instructions
-  $ codelarper open              # Open the web UI";
+  $ codelarpers submit            # Commit changes & run tests
+  $ codelarpers submit -m \"msg\"   # Commit changes & run tests with a custom commit message
+  $ codelarpers test              # Run tests without committing changes
+  $ codelarpers test --previous   # Run tests for all previous stages and the current stage
+  $ codelarpers task              # View current stage instructions
+  $ codelarpers open              # Open the web UI";
 
 #[derive(Parser)]
 #[command(
-    name = "codelarper",
+    name = "codelarpers",
     version,
     about = "CLI to interact with codelarpers, your local challenge platform",
     after_help = EXAMPLES,
@@ -40,7 +40,7 @@ enum Command {
     /// Commit changes & run tests (passing completes the stage)
     Submit {
         /// Custom commit message
-        #[arg(short, long, default_value = "codelarper submit")]
+        #[arg(short, long, default_value = "codelarpers submit")]
         message: String,
     },
     /// Run tests without committing changes
@@ -89,7 +89,7 @@ enum Command {
         /// Restart the background server
         #[arg(long)]
         restart: bool,
-        #[arg(long, env = "CODELARPER_PORT", default_value_t = paths::DEFAULT_PORT)]
+        #[arg(long, env = "CODELARPERS_PORT", default_value_t = paths::DEFAULT_PORT)]
         port: u16,
     },
     /// Course authoring tools (for agents)
@@ -271,13 +271,13 @@ fn run_dev(dev: Dev) -> anyhow::Result<()> {
             if let Some(project) = c.source.project.as_deref().filter(|_| c.kind == "codebase") {
                 let found = icons::find_icons(std::path::Path::new(project));
                 if !found.is_empty() {
-                    println!("Logo candidates from the project (pick one with `codelarper dev set-icon {} <file>`):", c.slug);
+                    println!("Logo candidates from the project (pick one with `codelarpers dev set-icon {} <file>`):", c.slug);
                     for cand in found.iter().take(3) {
                         println!("  {:>4}  {}", cand.score, cand.location);
                     }
                 }
             }
-            println!("Next: write overview.md, introduction.md and starters/{}/, then add stages with `codelarper dev new-stage`.", c.languages[0]);
+            println!("Next: write overview.md, introduction.md and starters/{}/, then add stages with `codelarpers dev new-stage`.", c.languages[0]);
             Ok(())
         }
         Dev::FindIcon { project, json } => {
