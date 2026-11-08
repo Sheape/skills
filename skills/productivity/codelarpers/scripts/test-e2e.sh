@@ -37,6 +37,13 @@ cp "$CODELARPERS_HOME/courses/wc/solution/python/app/main.py" "$nm/app/main.py"
 if out="$("$bin" dev validate wc --stage lc1 2>&1)"; then fail "validate accepted a near-miss that passes its stage"; fi
 has "$out" "the tests miss this bug" || fail "validate did not name the uncaught near-miss: $out"
 rm -rf "$nm"
+echo "== law: shrink a broken law to its smallest input"
+law_dir="$root/law"
+cp -R "$CODELARPERS_HOME/courses/wc/solution/python" "$law_dir"
+cp "$CODELARPERS_HOME/courses/wc/stages/wd2/near-misses/python/separators-plus-one/app/main.py" "$law_dir/app/main.py"
+if out="$(CODELARPERS_SEED=1 "$bin" dev try wc "$law_dir" --stage df4 2>&1)"; then fail "df4 passed a program that counts an empty file as one word"; fi
+has "$out" "Law broken: counts of a + b" || fail "df4 did not report the broken law: $out"
+has "$out" 'Smallest input that breaks it: "", ""' || fail "the law did not shrink to the smallest input: $out"
 echo "== publish"
 "$bin" dev publish wc
 

@@ -23,6 +23,8 @@ $ ./your_program.sh input.txt
 <lines> <words> <bytes> input.txt
 ```
 
+It also checks a law on generated text: counting two pieces of text separately adds up to counting them joined, whenever the first piece is empty or ends in a newline. A failure shows the smallest input that breaks it.
+
 ### Notes
 
 - Random input means hardcoded answers won't pass. Compute every number.

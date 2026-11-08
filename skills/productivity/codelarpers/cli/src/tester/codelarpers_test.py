@@ -18,6 +18,13 @@ Exit 0 = stage passed, exit 1 = learner's code failed, anything else = bug in th
     r = run(["count", "input.txt"], cwd=d)
     expect_exit_code(r, 0)
     expect_stdout(r, "3\\n")
+
+A law checks a general property on generated inputs and shrinks a failure:
+
+    def counts_add_up(a, b):
+        expect_equal(count(a + b), count(a) + count(b), "count of a + b")
+
+    law("count(a + b) == count(a) + count(b)", lambda r: (r.string(r.int(0, 9)), r.string(r.int(0, 9))), counts_add_up)
 """
 
 import atexit
@@ -46,6 +53,8 @@ DEBUG = os.environ.get("CODELARPERS_DEBUG") == "1"
 _lock = threading.Lock()
 _tmpdirs = []
 _children = []
+_sampling = False  # law() is trying inputs: print nothing
+_trapping = False  # inside law(): fail() raises _Broken instead of exiting
 
 WORDS = [
     "apple", "banana", "blueberry", "cherry", "grape", "mango", "orange", "pear", "pineapple", "raspberry",
@@ -55,6 +64,8 @@ WORDS = [
 
 
 def _emit(marker, text):
+    if _sampling:
+        return
     with _lock:
         for line in str(text).split("\n"):
             sys.stdout.write(f"{marker}{line}\n")
@@ -74,8 +85,18 @@ def debug(text):
         _emit("!debug ", text)
 
 
+class _Broken(Exception):
+    pass
+
+
+class _Discard(Exception):
+    pass
+
+
 def fail(message):
     """Stop the test: the learner's program is wrong. Prints the reason and exits 1."""
+    if _trapping:
+        raise _Broken(message)
     _emit("!fail ", message)
     _cleanup()
     os._exit(1)
@@ -353,6 +374,117 @@ def expect_file(path, content=None):
 def expect_equal(actual, expected, label="value"):
     if actual != expected:
         fail(f"Expected {label} to be {q(expected) if isinstance(expected, str) else expected!r}, got: {q(actual) if isinstance(actual, str) else actual!r}")
+
+
+def assume(condition):
+    """Inside a law's check: skip this input when the law does not apply to it."""
+    if not condition:
+        raise _Discard()
+
+
+def _fmt(x):
+    if isinstance(x, (str, bytes, bytearray)):
+        return q(x)
+    if isinstance(x, tuple):
+        return ", ".join(_fmt(e) for e in x)
+    if isinstance(x, list):
+        return "[" + ", ".join(_fmt(e) for e in x) + "]"
+    if isinstance(x, dict):
+        return "{" + ", ".join(f"{_fmt(k)}: {_fmt(v)}" for k, v in x.items()) + "}"
+    return repr(x)
+
+
+def _trial(check, x):
+    """None when the law holds (or doesn't apply), else why it broke."""
+    try:
+        check(*x) if isinstance(x, tuple) else check(x)
+    except _Discard:
+        return None
+    except _Broken as e:
+        return str(e)
+    except Exception as e:  # a check that can't read the output counts as broken
+        return f"{type(e).__name__}: {e}"
+    return None
+
+
+def _candidates(x):
+    """Simpler versions of x, biggest cuts first."""
+    if isinstance(x, bool):
+        return
+    if isinstance(x, int):
+        if x != 0:
+            yield 0
+            if abs(x) > 1:
+                yield x // 2 if x > 0 else -(-x // 2)
+            yield x - 1 if x > 0 else x + 1
+    elif isinstance(x, (str, bytes, list)):
+        n, k = len(x), len(x)
+        while k >= 1:
+            for i in range(0, n, k):
+                yield x[:i] + x[i + k:]
+            k //= 2
+        if isinstance(x, list):
+            for i, e in enumerate(x):
+                for c in _candidates(e):
+                    yield x[:i] + [c] + x[i + 1:]
+        else:
+            a = "a" if isinstance(x, str) else b"a"
+            for i in range(n):
+                if x[i:i + 1] != a:
+                    yield x[:i] + a + x[i + 1:]
+    elif isinstance(x, tuple):
+        for i, e in enumerate(x):
+            for c in _candidates(e):
+                yield x[:i] + (c,) + x[i + 1:]
+    elif isinstance(x, dict):
+        for k in x:
+            yield {j: v for j, v in x.items() if j != k}
+        for k, v in x.items():
+            for c in _candidates(v):
+                yield {**x, k: c}
+
+
+def law(name, generate, check, runs=20, shrink=None, budget=300):
+    """Check a general property of the learner's program on `runs` generated inputs.
+
+    generate(random) builds one input: a str, bytes, int, list, tuple or dict of these.
+    check(x) runs the program and asserts with expect_*() or fail(); a tuple input is
+    passed as check(*x). Call assume(cond) in check to skip inputs the law doesn't cover.
+    When the law breaks, the input is shrunk to the smallest one that still breaks it
+    (at most `budget` more checks), replayed with its full log, and the stage fails with
+    the law's name. shrink(x) may yield simpler candidates for custom input types.
+    """
+    global _sampling, _trapping
+    _trapping = True
+    try:
+        for _ in range(runs):
+            x = generate(random)
+            _sampling = True
+            reason = _trial(check, x)
+            tries = 0
+            while reason is not None and tries < budget:
+                for c in (shrink or _candidates)(x):
+                    tries += 1
+                    r = _trial(check, c)
+                    if r is not None:
+                        x, reason = c, r
+                        break
+                    if tries >= budget:
+                        break
+                else:
+                    break
+            _sampling = False
+            if reason is None:
+                continue
+            log(f"Law: {name}")
+            log(f"Smallest input that breaks it: {_fmt(x)}")
+            reason = _trial(check, x) or reason
+            _trapping = False
+            fail(f"Law broken: {name}. {reason}")
+    finally:
+        _sampling = False
+        _trapping = False
+    ok(f"Law holds on {runs} generated inputs: {name}")
 
 
 def oracle(cmd, cwd=None, stdin=None, env=None, timeout=30):

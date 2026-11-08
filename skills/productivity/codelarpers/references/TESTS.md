@@ -22,6 +22,7 @@ The tests are the teacher: the learner meets the subject through their failures.
 
 - **Edge cases** from its Notes (empty input, missing trailing newline, multibyte text, the boundary value).
 - **Randomized inputs** whenever a fixed answer could be hard-coded. Use a script test with `random`; `validate --repeat 3` runs several seeds.
+- **A [law](#laws)** wherever a general property holds, so bugs nobody wrote a case for still fail.
 - **Real behaviour as the oracle.** For codebase challenges, take expected outputs from the studied code itself: run it while authoring and freeze the results into fixtures. Run a live oracle only when the tool is certain to be installed (for example `git` in a git challenge).
 
 ## tests.json
@@ -100,6 +101,8 @@ for case in range(3):
 | `spawn(args, cwd=None, env=None)` | long-running program: `.wait_for_output(pattern, timeout)`, `.write(data)`, `.output()`, `.kill()` |
 | `wait_for_port(port)`, `connect(port)` | TCP: `conn.send(data)`, `conn.read(until=b"\r\n" or nbytes=N or regex)`, `conn.close()` |
 | `oracle(cmd, cwd=None, stdin=None)` | runs a reference command (not logged as the program) |
+| `law(name, generate, check, runs=20, shrink=None)` | checks a general property on generated inputs and shrinks a failure; see [Laws](#laws) |
+| `assume(cond)` | inside a law's check: skip an input the law doesn't cover |
 | `expect_stdout_bytes(r, expected)` | exact byte comparison for `binary=True` results |
 | `expect_exit_code`, `expect_stdout`, `expect_stdout_lines`, `expect_stdout_contains`, `expect_stdout_matches`, `expect_stderr_contains`, `expect_file(path, content=None)`, `expect_equal(actual, expected, label)` | fail with an expected-versus-got message |
 | `log(text)`, `ok(text)`, `debug(text)`, `fail(message)` | protocol output; `fail` exits 1 |
@@ -118,6 +121,25 @@ conn.send(b"*1\r\n$4\r\nPING\r\n")
 expect_equal(conn.read(until=b"\r\n"), b"+PONG\r\n", "response")
 server.kill()
 ```
+
+## Laws
+
+A law is a property that holds for every input, checked on generated ones: a round trip (`decode(encode(x)) == x`), additivity (`count(a + b) == count(a) + count(b)`), an invariant (sorting keeps every line), idempotence (`f(f(x)) == f(x)`), or agreement with an oracle on random input. Cases pin the exact format and the known edge cases; a law catches the bug nobody wrote a case for. From wc's df4:
+
+```python
+def counts_add_up(a, b):
+    assume(a == "" or a.endswith("\n"))  # otherwise a word can span the join
+    expect_equal(wc(a + b), [x + y for x, y in zip(wc(a), wc(b))], "the counts of a + b")
+
+law("counts of a + b = counts of a + counts of b, when a ends in a newline",
+    lambda r: (text(r), text(r)), counts_add_up)
+```
+
+- `generate(random)` returns one input; a tuple reaches `check` as separate arguments. Keep inputs small and let them hit the edges (empty, one item, whitespace only): generation makes a failure likely, shrinking makes it small.
+- `check` runs the program and asserts with `expect_*`. Output it cannot parse counts as a broken law. `assume(cond)` skips inputs outside the law, which also keeps shrinking inside it.
+- Nothing is logged while sampling. A broken law shrinks its input (strings, bytes, ints, lists, tuples, dicts; pass `shrink=` for other types), replays the smallest one with its log, and fails the stage with `Law broken: <name>. <reason>`.
+- Cost is `runs` times the program runs per check. Keep a stage under a few seconds.
+- Name each law in the stage's `### Tests` section, so the learner knows what is checked.
 
 ## Authoring loop
 
