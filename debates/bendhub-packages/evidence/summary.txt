@@ -1,0 +1,77 @@
+packages 1107 first 2026-09-10 last 2026-11-08
+per ISO week [(37, 3), (38, 91), (39, 233), (40, 159), (41, 68), (42, 104), (43, 216), (44, 146), (45, 87)]
+LAWS.bend 135 (12%), PROOF.bend 136 (12%), own .c/.js 257 (23%), LICENSE file 439 (39%)
+named packages (have a name@version): 0
+source owners (from desc): [('(no source link)', 730), ('paymog', 356), ('jonasporto', 19), ('LucasGois1', 2)]
+name prefixes: [('(unnamed)', 1107)]
+names keys sample: <class 'list'>
+names sample: {"name": "bend-kit-http", "owner_login": "paymog", "ts": 1790358917008, "dependents": 105, "mentions": 0, "score": 105, "latest": {"version": "0.38.5.0", "hash": "0x6b3ebcbb9264d7f98890afef3943cfb1", "ts": 1793757502164, "desc": "HTTP/1.1 and HTTP/2 client, with an HTTP/1.1 server. Source: https://g
+names (top 100 hot): 100 owners: 1 [(None, 100)]
+most-imported names: [(341, 'bend-kit-bytes', None), (137, 'bend-kit-json', None), (134, 'bend-kit-time', None), (108, 'bend-kit-encoding', None), (105, 'bend-kit-http', None), (97, 'bend-kit-wire', None), (76, 'bend-kit-crypto', None), (69, 'bend-kit-dns', None), (68, 'bend-kit-hairpin', None), (63, 'bend-kit-retry', None), (54, 'bend-ml-tensor-array', None), (53, 'bend-kit-zlib', None), (47, 'bend-kit-resources', None), (38, 'bend-kit-http2', None), (36, 'bend-kit-collections', None)]
+
+== search test
+   element-http | HTTP/1.1 client over TCP and TLS: requests, chunked bodies, gzip, redirects, cookies, DNS. | matched readme
+   element-tls13 | A TLS 1.3 client (and TLS 1.2 for older servers) as a pure state machine, sans-IO. Apache- | matched readme
+   element-x509 | X.509 certificates: PEM, parsing, host names, validity, path building to a root. Apache-2. | matched readme
+   element-crypto | SHA-1/2, HMAC, HKDF, AES-128-GCM, ChaCha20-Poly1305, X25519, P-256 ECDH, ECDSA and RSA ver | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-ml-llama | bend-ml-llama: Llama-architecture language models (SmolLM2 and the rest of the family) in  | matched readme
+   0x9b8f2c0a3d |  | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   0x8888743439 |  | matched readme
+
+== search property
+   bend-ml-llama | bend-ml-llama: Llama-architecture language models (SmolLM2 and the rest of the family) in  | matched readme
+   bend-ml-tensor-array | bend-ml-tensor-array: tensors over a flat Array<F32>, with the shape in the type. | matched readme
+   bend-kit-property | Reproducible property checks with generated inputs and greedy shrinking. | matched desc
+   bend-kit-property | Reproducible property checks with generated inputs and greedy shrinking. | matched desc
+   0x738b305308 | bendcheck: property-based testing for Bend. | matched desc
+
+== search random
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   0x9b8f2c0a3d |  | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   0x8888743439 |  | matched readme
+   0xeedc51d20a |  | matched readme
+   bend-ml-tensor-gpu | bend-ml-tensor-gpu: tensor-array's products on the GPU, with tensor-array's bits. | matched readme
+   bend-kit-multipart | multipart/form-data (RFC 7578): an encoder with a secure random boundary and a streaming d | matched desc
+   bend-kit-crypto | Digests, HMAC, HKDF, PBKDF2, scrypt, AEAD, and RSA and ECDSA signatures through OpenSSL 3  | matched desc
+   bend-kit-multipart | multipart/form-data (RFC 7578): an encoder with a secure random boundary and a streaming d | matched desc
+
+== search diff
+   element-http | HTTP/1.1 client over TCP and TLS: requests, chunked bodies, gzip, redirects, cookies, DNS. | matched readme
+   element-tls13 | A TLS 1.3 client (and TLS 1.2 for older servers) as a pure state machine, sans-IO. Apache- | matched readme
+   element-x509 | X.509 certificates: PEM, parsing, host names, validity, path building to a root. Apache-2. | matched readme
+   element-crypto | SHA-1/2, HMAC, HKDF, AES-128-GCM, ChaCha20-Poly1305, X25519, P-256 ECDH, ECDSA and RSA ver | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-ml-llama | bend-ml-llama: Llama-architecture language models (SmolLM2 and the rest of the family) in  | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-kube-runtime | The package entry: `bend package.bend --publish bend-kube-runtime@X.Y.Z.0` | matched readme
+   bend-ml-tensor-fork | bend-ml-tensor-fork: bend-ml-tensor-array's products, with the parallel blocks sharing the | matched readme
+   bend-ml-tensor-gpu | bend-ml-tensor-gpu: tensor-array's products on the GPU, with tensor-array's bits. | matched readme
+
+== search regex
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   bend-kit-regex | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   0xd6a37ba398 | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+   0x028439ae3c | Linear-time regular expressions: RE2 syntax, Pike VM, capture groups. Source: https://gith | matched desc
+
+names seen 128 owners [('paymog', 48), ('jonasporto', 14), ('noah-emp', 12), ('nuxyel', 10), ('ScottMoore0', 10), ('nicolas-abril', 9), ('luiscleto', 6), ('MattCozendey', 4), ('aivv73', 4), ('bodnarbalazs', 3)]
+bend-kit-bytes: 5 versions, 322 dependent packages, 310 from bend-kit itself; others: ['0x3d214765', 'bendonnect-rpc', 'emerging-ezhttp', 'ezhttp', 'mlbend-datasets', 'mlbend-huggingface', 'mylsm-lsm-store']
+bend-kit-property: {'owner_login': 'paymog', 'dependents': 0, 'mentions': 0} versions 4 latest 0.4.0.0 Reproducible property checks with generated inputs and greedy shrinking.

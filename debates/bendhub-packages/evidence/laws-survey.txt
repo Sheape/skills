@@ -1,0 +1,4 @@
+distinct LAWS.bend files: 109
+laws 3552: closed fixed-input equalities 1496 (42%), general (for x: T) 2056 (57%)
+files with at least one general law: 86 of 109; general law kinds: {'other': 1843, 'round_trip': 196, 'idempot': 17}
+PROOF.bend files with generated proofs (gen/proof.py etc): 12

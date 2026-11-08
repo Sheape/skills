@@ -1,0 +1,11 @@
+# Raw API dumps, reproducible with the commands cited in ../ledger.json.
+index.json
+hot.json
+names*.json
+name-*.json
+search-*.json
+pkg-*.json
+llms.txt
+GUIDE.md
+laws/
+element-http-*

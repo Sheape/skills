@@ -1,0 +1,457 @@
+{
+  "goal": "Decide whether Bend or BendHub packages can make agent-written codelarpers tests and submission checks stricter",
+  "research": false,
+  "max_rounds": 2,
+  "max_tokens": null,
+  "roadmap": null,
+  "supersedes": null,
+  "extra_axes": [
+    {
+      "name": "maintenance",
+      "by": "proponent",
+      "why": "the decision is whether to take on third-party packages: their age, upkeep, provenance and the unchecked code they run",
+      "status": "accepted",
+      "ruling_why": "every candidate use adds a dependency, and claims about its health decide the outcome"
+    }
+  ],
+  "claims": [
+    {
+      "id": "J1",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "BendHub holds 1107 packages, 305 names, 61 authors and 18 posts; the oldest package is from 2026-09-10, so the hub is about two months old.",
+      "evidence": {
+        "type": "measured",
+        "source": "curl https://hub.bend-lang.com/stats.json and /index.json",
+        "detail": "evidence/stats.json, evidence/summary.txt"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "J2",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Only 135 packages (12%) ship LAWS.bend and 136 (12%) PROOF.bend, so 88% carry none of the proofs Bend is pitched on.",
+      "evidence": {
+        "type": "measured",
+        "source": "evidence/index.json file lists",
+        "detail": "evidence/summary.txt"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "J3",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "257 packages (23%) ship their own .c or .js files, which the API docs say Bend runs without checking; publishing needs no account.",
+      "evidence": {
+        "type": "measured",
+        "source": "evidence/index.json; https://hub.bend-lang.com/api; https://hub.bend-lang.com/guide",
+        "detail": "evidence/summary.txt"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "J4",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Adoption is concentrated: paymog owns 48 of the 128 names sampled, and 310 of the 322 packages importing the most-imported name (bend-kit-bytes) are bend-kit's own; 730 packages (66%) give no source repository.",
+      "evidence": {
+        "type": "measured",
+        "source": "names.json, name/bend-kit-bytes, dependents.json walk",
+        "detail": "evidence/summary.txt"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "J5",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "The only testing packages are bend-kit-property (property checks with shrinking: 3 files, 0 dependents, 0 mentions, no LAWS or PROOF) and an unnamed 'bendcheck'; a search for 'assert' finds nothing.",
+      "evidence": {
+        "type": "measured",
+        "source": "search.json?q=test|property|assert|diff|random|regex; name/bend-kit-property; package/<hash>.json",
+        "detail": "evidence/search-*.json, evidence/pkg-bend-kit-property.json"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "J6",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "device",
+      "text": "bend is not installed here; codelarpers runs stage tests as test.py, test.sh, test.mjs, test.js or an executable test (course.rs:244), and its starter kits are rust, go, python, javascript, typescript, c and cpp, with no Bend.",
+      "evidence": {
+        "type": "measured",
+        "source": "command -v bend; cli/src/course.rs:244; cli/src/scaffold.rs kits"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "J7",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Bend itself is v2.0.39 and its site says it is still evolving and to expect bugs.",
+      "evidence": {
+        "type": "source",
+        "source": "https://bend-lang.com/"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "P1",
+      "round": 1,
+      "by": "proponent",
+      "kind": "proposal",
+      "text": "Write stage tests that need generated inputs with bend-kit-property, so a learner's failure shrinks to the smallest input that breaks their program.",
+      "evidence": {
+        "type": "source",
+        "source": "bend-kit-property description: reproducible property checks with generated inputs and greedy shrinking"
+      },
+      "ruling": "rejected",
+      "ruling_why": "O1, O2 and O4 stand: a new toolchain on every learner's machine for a package nobody imports, when the same benefit fits in the existing Python helper"
+    },
+    {
+      "id": "P2",
+      "round": 1,
+      "by": "proponent",
+      "kind": "proposal",
+      "text": "Add a bend starter kit so codelarpers can host courses written in Bend, with hub packages as the libraries learners import and, where they cite a public repo and licence, as tutorial code examples; packages are content-addressed and never change, so an example's URL stays valid.",
+      "evidence": {
+        "type": "source",
+        "source": "https://hub.bend-lang.com/guide (packages named by content hash, never change; default licence MIT-0)"
+      },
+      "ruling": "rejected",
+      "ruling_why": "Q1: no courses written in Bend"
+    },
+    {
+      "id": "P3",
+      "round": 1,
+      "by": "proponent",
+      "kind": "alternative",
+      "answers": [
+        "P1"
+      ],
+      "text": "Get the same shrinking benefit without Bend: add property checks with greedy shrinking to the embedded Python helper (codelarpers_test), which needs nothing new on the learner's machine.",
+      "estimate": {
+        "value": 60,
+        "unit": "lines of Python, stdlib only"
+      },
+      "evidence": {
+        "type": "estimate",
+        "source": "codelarpers_test already has a seeded random; a greedy shrinker over lists and strings is a small loop"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "O1",
+      "round": 1,
+      "by": "opponent",
+      "kind": "cost",
+      "axis": "device",
+      "severity": "high",
+      "answers": [
+        "P1"
+      ],
+      "text": "Every learner would need the Bend toolchain (curl | sh) and an executable test wrapper just to run stage tests, in courses written in Rust, Python or Go that never otherwise touch Bend.",
+      "evidence": {
+        "type": "measured",
+        "source": "J6"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "O2",
+      "round": 1,
+      "by": "opponent",
+      "kind": "risk",
+      "axis": "maintenance",
+      "severity": "high",
+      "answers": [
+        "P1",
+        "P2"
+      ],
+      "text": "The ecosystem is two months old and mostly one author's family; the one testing package has no users, and versions churn fast (bend-kit-http is at 0.38 within about six weeks), so a course pinned to a package today is likely pinned to an abandoned one soon.",
+      "evidence": {
+        "type": "measured",
+        "source": "J1, J4, J5, names.json versions"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "O3",
+      "round": 1,
+      "by": "opponent",
+      "kind": "risk",
+      "axis": "maintenance",
+      "severity": "medium",
+      "answers": [
+        "P2"
+      ],
+      "text": "As code examples, most packages fail the skill's rule of real code someone shipped: 66% name no source repository, authorship cannot be checked, and 23% run unchecked native code.",
+      "evidence": {
+        "type": "measured",
+        "source": "J3, J4; SKILL.md code-example rule"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "O4",
+      "round": 1,
+      "by": "opponent",
+      "kind": "rebuttal",
+      "answers": [
+        "P1"
+      ],
+      "text": "Shrinking is the only thing P1 adds, and it needs no Bend: the learner-facing gain is a smaller failing input in the log, which the Python helper can produce.",
+      "evidence": {
+        "type": "source",
+        "source": "cli/src/tester/codelarpers_test.py (seeded random, run, expect_*)"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "O5",
+      "round": 1,
+      "by": "opponent",
+      "kind": "cost",
+      "axis": "tokens",
+      "severity": "low",
+      "answers": [
+        "P1",
+        "P2"
+      ],
+      "text": "Each authoring agent would have to load Bend's guide before writing a Bend test or course, on top of the course's own research.",
+      "evidence": {
+        "type": "estimate",
+        "source": "bend-lang.com: agents are told to run `bend guide`, which prints the whole language"
+      },
+      "ruling": "upheld"
+    },
+    {
+      "id": "O6",
+      "round": 1,
+      "by": "opponent",
+      "kind": "alternative",
+      "answers": [
+        "P2"
+      ],
+      "text": "Use hub packages only inside a course that teaches Bend, and only packages that name a public source repository and licence; never in the harness or in other languages' tests.",
+      "evidence": {
+        "type": "measured",
+        "source": "J3, J4, J6"
+      },
+      "ruling": "rejected",
+      "ruling_why": "Q1: no Bend course to host packages in"
+    },
+    {
+      "id": "J8",
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Across the 109 distinct LAWS.bend files on the hub, 2056 of 3552 laws (57%) are general (for x: T, e.g. decrypt(encrypt(b)) == b) and 1496 (42%) are fixed-input equalities proven by computation; 86 files have at least one general law.",
+      "evidence": {
+        "type": "measured",
+        "source": "fetched every LAWS.bend and PROOF.bend via /0x<hash>/<path>",
+        "detail": "evidence/laws/, evidence/laws-survey.txt"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "J9",
+      "by": "judge",
+      "kind": "fact",
+      "axis": "tokens",
+      "text": "Bend's GUIDE.md, which `bend guide` prints for an agent to learn the language, is 28,495 bytes, about 7k tokens.",
+      "evidence": {
+        "type": "measured",
+        "source": "curl raw.githubusercontent.com/bendlang/bend/main/guide/GUIDE.md | wc -c",
+        "detail": "evidence/GUIDE.md"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "J10",
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Commit f29fa4a makes `dev validate` require near-misses: per stage, solution files with one plausible bug that must pass earlier stages and fail their own on every seed; the wc example now validates across three seeds.",
+      "evidence": {
+        "type": "measured",
+        "source": "git log f29fa4a; handed-off session report"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "J11",
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "The tester only sees a submission as a process: it runs .codelarpers/run.sh and checks exit code, stdout, stderr and files; nothing reads the submission's source.",
+      "evidence": {
+        "type": "measured",
+        "source": "cli/src/tester.rs run_stage and run_cases"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "P4",
+      "by": "proponent",
+      "kind": "proposal",
+      "text": "For each stage, the authoring agent writes a Bend reference model plus LAWS.bend and proves the laws, then uses the proven model as the oracle that produces expected output for random inputs; J8 shows agents already write and prove general laws on the hub.",
+      "evidence": {
+        "type": "measured",
+        "source": "J8"
+      },
+      "ruling": "rejected",
+      "ruling_why": "O7, O8 and O10 stand: the proof binds the model, not the submission, the oracle role is already filled by independent implementations, and the model needs Bend on every learner's machine or freezes the seeds",
+      "round": 2
+    },
+    {
+      "id": "P5",
+      "by": "proponent",
+      "kind": "alternative",
+      "answers": [
+        "P4",
+        "P1"
+      ],
+      "text": "Take Bend's discipline without Bend: each stage states its laws (general properties such as lines(a+b) = lines(a) + lines(b)), and the Python helper gains law(name, generate, check), which samples seeded inputs against the learner's program, shrinks a failure to the smallest counterexample and prints the law's name; fixed edge cases stay as cases, and near-misses must break a law or a case.",
+      "estimate": {
+        "value": 120,
+        "unit": "lines of stdlib Python plus doc changes"
+      },
+      "evidence": {
+        "type": "source",
+        "source": "J8 (the kinds of laws agents write), J10, J11, cli/src/tester/codelarpers_test.py"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "O7",
+      "by": "opponent",
+      "kind": "rebuttal",
+      "answers": [
+        "P4"
+      ],
+      "text": "A Bend proof constrains the Bend model only; the submission is a black-box process (J11), so it is still judged by sampling outputs on chosen inputs, exactly as with any other oracle.",
+      "evidence": {
+        "type": "measured",
+        "source": "J11"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "O8",
+      "by": "opponent",
+      "kind": "rebuttal",
+      "answers": [
+        "P4"
+      ],
+      "text": "The oracle role is already filled independently: the studied codebase for codebase courses, the real tool for tutorials, and solution/ proven green; a Bend model is a second implementation by the same agent, whose laws come from the same reading of the spec, so a misread spec is proven, not caught.",
+      "evidence": {
+        "type": "source",
+        "source": "references/CURRICULUM.md and TESTS.md oracle guidance; SKILL.md step 5"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "O9",
+      "by": "opponent",
+      "kind": "cost",
+      "axis": "tokens",
+      "severity": "medium",
+      "answers": [
+        "P4"
+      ],
+      "text": "Every authoring session would load about 7k tokens of Bend guide before writing a model, then spend more on proofs; 12 of the 109 proof files on the hub were generated by scripts, a hint that proofs at scale need tooling.",
+      "estimate": {
+        "value": 7000,
+        "unit": "tokens per authoring session, before proofs"
+      },
+      "evidence": {
+        "type": "measured",
+        "source": "J9, evidence/laws/*.PROOF.bend"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "O10",
+      "by": "opponent",
+      "kind": "cost",
+      "axis": "device",
+      "severity": "high",
+      "answers": [
+        "P4"
+      ],
+      "text": "Run at test time, the Bend oracle needs the Bend toolchain on every learner's machine (J6); run only at authoring time, expected outputs are frozen and each `codelarpers test` can no longer draw fresh seeded inputs.",
+      "evidence": {
+        "type": "measured",
+        "source": "J6; tester default_seed per run"
+      },
+      "ruling": "upheld",
+      "round": 2
+    },
+    {
+      "id": "O11",
+      "by": "opponent",
+      "kind": "risk",
+      "axis": "maintenance",
+      "severity": "low",
+      "answers": [
+        "P5"
+      ],
+      "text": "Sampled laws can miss a bug that only rare inputs expose, where a proof would rule it out; likely on stages whose interesting inputs are sparse.",
+      "evidence": {
+        "type": "estimate",
+        "source": "property testing samples, it does not prove"
+      },
+      "ruling": "upheld",
+      "round": 2
+    }
+  ],
+  "questions": [
+    {
+      "id": "Q1",
+      "by": "judge",
+      "blocks": [
+        "P2",
+        "O6"
+      ],
+      "ask": "Do you want codelarpers to host courses where the learner writes Bend (a Bend starter kit), or only courses in languages like Rust, Python and Go?",
+      "answer": "No Bend courses. The user wants to know whether Bend can make agent-written test cases and submission checks stricter or better."
+    }
+  ],
+  "proofs": [],
+  "hypothesis": null,
+  "spend": [
+    {
+      "round": 1,
+      "tokens": 70000
+    },
+    {
+      "round": 2,
+      "tokens": 45000
+    }
+  ]
+}

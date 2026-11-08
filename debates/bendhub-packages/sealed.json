@@ -1,0 +1,228 @@
+{
+  "round": 1,
+  "claims": {
+    "J1": {
+      "id": "J1",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "BendHub holds 1107 packages, 305 names, 61 authors and 18 posts; the oldest package is from 2026-09-10, so the hub is about two months old.",
+      "evidence": {
+        "type": "measured",
+        "source": "curl https://hub.bend-lang.com/stats.json and /index.json",
+        "detail": "evidence/stats.json, evidence/summary.txt"
+      }
+    },
+    "J2": {
+      "id": "J2",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Only 135 packages (12%) ship LAWS.bend and 136 (12%) PROOF.bend, so 88% carry none of the proofs Bend is pitched on.",
+      "evidence": {
+        "type": "measured",
+        "source": "evidence/index.json file lists",
+        "detail": "evidence/summary.txt"
+      }
+    },
+    "J3": {
+      "id": "J3",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "257 packages (23%) ship their own .c or .js files, which the API docs say Bend runs without checking; publishing needs no account.",
+      "evidence": {
+        "type": "measured",
+        "source": "evidence/index.json; https://hub.bend-lang.com/api; https://hub.bend-lang.com/guide",
+        "detail": "evidence/summary.txt"
+      }
+    },
+    "J4": {
+      "id": "J4",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Adoption is concentrated: paymog owns 48 of the 128 names sampled, and 310 of the 322 packages importing the most-imported name (bend-kit-bytes) are bend-kit's own; 730 packages (66%) give no source repository.",
+      "evidence": {
+        "type": "measured",
+        "source": "names.json, name/bend-kit-bytes, dependents.json walk",
+        "detail": "evidence/summary.txt"
+      }
+    },
+    "J5": {
+      "id": "J5",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "The only testing packages are bend-kit-property (property checks with shrinking: 3 files, 0 dependents, 0 mentions, no LAWS or PROOF) and an unnamed 'bendcheck'; a search for 'assert' finds nothing.",
+      "evidence": {
+        "type": "measured",
+        "source": "search.json?q=test|property|assert|diff|random|regex; name/bend-kit-property; package/<hash>.json",
+        "detail": "evidence/search-*.json, evidence/pkg-bend-kit-property.json"
+      }
+    },
+    "J6": {
+      "id": "J6",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "device",
+      "text": "bend is not installed here; codelarpers runs stage tests as test.py, test.sh, test.mjs, test.js or an executable test (course.rs:244), and its starter kits are rust, go, python, javascript, typescript, c and cpp, with no Bend.",
+      "evidence": {
+        "type": "measured",
+        "source": "command -v bend; cli/src/course.rs:244; cli/src/scaffold.rs kits"
+      }
+    },
+    "J7": {
+      "id": "J7",
+      "round": 1,
+      "by": "judge",
+      "kind": "fact",
+      "axis": "maintenance",
+      "text": "Bend itself is v2.0.39 and its site says it is still evolving and to expect bugs.",
+      "evidence": {
+        "type": "source",
+        "source": "https://bend-lang.com/"
+      }
+    },
+    "P1": {
+      "id": "P1",
+      "round": 1,
+      "by": "proponent",
+      "kind": "proposal",
+      "text": "Write stage tests that need generated inputs with bend-kit-property, so a learner's failure shrinks to the smallest input that breaks their program.",
+      "evidence": {
+        "type": "source",
+        "source": "bend-kit-property description: reproducible property checks with generated inputs and greedy shrinking"
+      }
+    },
+    "P2": {
+      "id": "P2",
+      "round": 1,
+      "by": "proponent",
+      "kind": "proposal",
+      "text": "Add a bend starter kit so codelarpers can host courses written in Bend, with hub packages as the libraries learners import and, where they cite a public repo and licence, as tutorial code examples; packages are content-addressed and never change, so an example's URL stays valid.",
+      "evidence": {
+        "type": "source",
+        "source": "https://hub.bend-lang.com/guide (packages named by content hash, never change; default licence MIT-0)"
+      }
+    },
+    "P3": {
+      "id": "P3",
+      "round": 1,
+      "by": "proponent",
+      "kind": "alternative",
+      "answers": [
+        "P1"
+      ],
+      "text": "Get the same shrinking benefit without Bend: add property checks with greedy shrinking to the embedded Python helper (codelarpers_test), which needs nothing new on the learner's machine.",
+      "estimate": {
+        "value": 60,
+        "unit": "lines of Python, stdlib only"
+      },
+      "evidence": {
+        "type": "estimate",
+        "source": "codelarpers_test already has a seeded random; a greedy shrinker over lists and strings is a small loop"
+      }
+    },
+    "O1": {
+      "id": "O1",
+      "round": 1,
+      "by": "opponent",
+      "kind": "cost",
+      "axis": "device",
+      "severity": "high",
+      "answers": [
+        "P1"
+      ],
+      "text": "Every learner would need the Bend toolchain (curl | sh) and an executable test wrapper just to run stage tests, in courses written in Rust, Python or Go that never otherwise touch Bend.",
+      "evidence": {
+        "type": "measured",
+        "source": "J6"
+      }
+    },
+    "O2": {
+      "id": "O2",
+      "round": 1,
+      "by": "opponent",
+      "kind": "risk",
+      "axis": "maintenance",
+      "severity": "high",
+      "answers": [
+        "P1",
+        "P2"
+      ],
+      "text": "The ecosystem is two months old and mostly one author's family; the one testing package has no users, and versions churn fast (bend-kit-http is at 0.38 within about six weeks), so a course pinned to a package today is likely pinned to an abandoned one soon.",
+      "evidence": {
+        "type": "measured",
+        "source": "J1, J4, J5, names.json versions"
+      }
+    },
+    "O3": {
+      "id": "O3",
+      "round": 1,
+      "by": "opponent",
+      "kind": "risk",
+      "axis": "maintenance",
+      "severity": "medium",
+      "answers": [
+        "P2"
+      ],
+      "text": "As code examples, most packages fail the skill's rule of real code someone shipped: 66% name no source repository, authorship cannot be checked, and 23% run unchecked native code.",
+      "evidence": {
+        "type": "measured",
+        "source": "J3, J4; SKILL.md code-example rule"
+      }
+    },
+    "O4": {
+      "id": "O4",
+      "round": 1,
+      "by": "opponent",
+      "kind": "rebuttal",
+      "answers": [
+        "P1"
+      ],
+      "text": "Shrinking is the only thing P1 adds, and it needs no Bend: the learner-facing gain is a smaller failing input in the log, which the Python helper can produce.",
+      "evidence": {
+        "type": "source",
+        "source": "cli/src/tester/codelarpers_test.py (seeded random, run, expect_*)"
+      }
+    },
+    "O5": {
+      "id": "O5",
+      "round": 1,
+      "by": "opponent",
+      "kind": "cost",
+      "axis": "tokens",
+      "severity": "low",
+      "answers": [
+        "P1",
+        "P2"
+      ],
+      "text": "Each authoring agent would have to load Bend's guide before writing a Bend test or course, on top of the course's own research.",
+      "evidence": {
+        "type": "estimate",
+        "source": "bend-lang.com: agents are told to run `bend guide`, which prints the whole language"
+      }
+    },
+    "O6": {
+      "id": "O6",
+      "round": 1,
+      "by": "opponent",
+      "kind": "alternative",
+      "answers": [
+        "P2"
+      ],
+      "text": "Use hub packages only inside a course that teaches Bend, and only packages that name a public source repository and licence; never in the harness or in other languages' tests.",
+      "evidence": {
+        "type": "measured",
+        "source": "J3, J4, J6"
+      }
+    }
+  }
+}
