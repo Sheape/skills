@@ -18,7 +18,7 @@ import unicodedata
 from pathlib import Path
 
 TAG = "@understand"
-STATUSES = ("known", "edge", "unknown")
+STATUSES = ("known", "edge", "unknown", "skipped")
 COMMENT = {
     ".rs": "//", ".ts": "//", ".tsx": "//", ".js": "//", ".jsx": "//", ".mjs": "//",
     ".go": "//", ".java": "//", ".kt": "//", ".swift": "//", ".c": "//", ".cc": "//",
@@ -162,14 +162,15 @@ def indent_end(lines, start):
     return end
 
 
-def body(path, signature):
-    """(start, end, text) of the one definition whose first line is `signature`, else None."""
+def body(path, signature, near=None):
+    """(start, end, text) of the definition whose first line is `signature`, else None.
+    Several matches (`pub fn new() -> Self {` in two impls) resolve to the one nearest line NEAR."""
     comment = COMMENT.get(path.suffix, "//")
     lines = code_lines(path.read_text(), comment)
     matches = [i for i, line in enumerate(lines) if line.strip() == signature.strip()]
-    if len(matches) != 1:
+    if not matches or (len(matches) > 1 and near is None):
         return None
-    start = matches[0]
+    start = min(matches, key=lambda i: abs(i + 1 - near)) if near else matches[0]
     end = indent_end(lines, start) if path.suffix == ".py" else brace_end(lines, start)
     if end is None:
         return None
@@ -185,18 +186,6 @@ def current(state):
     return load(state / "current.json", {})
 
 
-def relative(root, state, file):
-    """FILE as a path from the repository root, whether given from the worktree or the repo."""
-    path = Path(file)
-    if not path.is_absolute():
-        return file
-    tree = current(state).get("worktree")
-    for base in ([Path(tree)] if tree else []) + [root]:
-        if path.is_relative_to(base):
-            return str(path.relative_to(base))
-    die(f"{file} is outside the repository and its worktree")
-
-
 def snapshot_file(root, state, rel):
     """The snapshot's copy of REL without probes: pristine, else worktree, else repo."""
     tree = current(state).get("worktree")
@@ -206,41 +195,252 @@ def snapshot_file(root, state, rel):
     die(f"{rel} not found")
 
 
+# ---------- inventory ----------
+#
+# Every function in the repository, found by pattern rather than a parser: enough to count
+# coverage and name functions the way the map does (`<path>::<Type>::<fn>`), not to compile.
+
+SOURCE = {".rs", ".py", ".go", ".ts", ".tsx", ".js", ".jsx", ".mjs"}
+TEST_DIRS = {"tests", "test", "__tests__", "testdata", "fixtures", "benches", "e2e", "testing"}
+CI_DIRS = {".github", ".gitlab", ".circleci", ".buildkite", "ci"}
+TEST_FILE = re.compile(r"^test_.*\.py$|_test\.(py|go)$|^conftest\.py$|\.(test|spec)\.[cm]?[jt]sx?$")
+TOOLING = re.compile(r"(^|/)(build\.rs|setup\.py|noxfile\.py|[\w.-]+\.config\.[cm]?[jt]s)$")
+GENERATED = re.compile(r"\.d\.ts$|\.gen\.|(^|/)generated/|_pb2\.py$|\.pb\.go$")
+VISIBILITY = r"(?:pub(?:\([^)]*\))?\s+)?"
+RS_FN = re.compile(rf'^\s*{VISIBILITY}(?:default\s+)?(?:const\s+)?(?:async\s+)?(?:unsafe\s+)?(?:extern\s+"[^"]*"\s+)?fn\s+(\w+)')
+RS_IMPL = re.compile(r"^\s*(?:unsafe\s+)?impl\b(.*)$")
+RS_TRAIT = re.compile(rf"^\s*{VISIBILITY}(?:unsafe\s+)?trait\s+(\w+)")
+RS_MOD = re.compile(rf"^\s*{VISIBILITY}mod\s+(\w+)\s*\{{")
+RS_TEST_ATTR = re.compile(r"#\[(?:[\w:]+::)?test\b|#\[cfg\(test\)\]")
+PY_DEF = re.compile(r"^(\s*)(?:async\s+)?(def|class)\s+(\w+)")
+GO_FUNC = re.compile(r"^func\s+(?:\(\s*(?:\w+\s+)?\*?\s*(\w+)[^)]*\)\s*)?(\w+)")
+# Top level only: a closure inside a function is part of that function, not one more to learn.
+JS_FN = re.compile(r"^(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*(\w+)")
+JS_ARROW = re.compile(r"^(?:export\s+)?(?:const|let|var)\s+(\w+)\s*(?::[^=]+)?=\s*(?:async\s+)?"
+                      r"(?:function\b|(?:<[^>]*>\s*)?\([^)]*\)\s*(?::[^=]+?)?=>|\w+\s*=>|\(\{?\s*$)")
+JS_CLASS = re.compile(r"^\s*(?:export\s+)?(?:default\s+)?(?:abstract\s+)?class\s+(\w+)")
+JS_METHOD = re.compile(r"^\s+(?:(?:public|private|protected|static|async|readonly|override|get|set)\s+)*(\w+)\s*(?:<[^>]*>)?\(.*\{\s*$")
+JS_KEYWORDS = {"if", "for", "while", "switch", "catch", "return", "function", "constructor"}
+
+
+def file_scope(rel):
+    """Why REL is outside the default scope ('test', 'ci', 'generated', 'tooling'), or None."""
+    parts = Path(rel).parts
+    if any(part in CI_DIRS for part in parts[:-1]):
+        return "ci"
+    if GENERATED.search(rel):
+        return "generated"
+    if TOOLING.search(rel):
+        return "tooling"
+    if any(part in TEST_DIRS for part in parts[:-1]) or TEST_FILE.search(parts[-1]):
+        return "test"
+    return None
+
+
+def attributes_above(lines, index):
+    """The attribute and comment lines stacked directly above LINES[index]."""
+    out = []
+    while index > 0 and lines[index - 1].strip().startswith(("#[", "//", "@", "#![")):
+        index -= 1
+        out.append(lines[index].strip())
+    return out
+
+
+def has_body(lines, index):
+    """False for a declaration without a body (a trait method, an extern fn)."""
+    depth = 0
+    for line in lines[index:index + 40]:
+        for ch in line.split("//")[0]:
+            if ch in "([":
+                depth += 1
+            elif ch in ")]":
+                depth -= 1
+            elif depth == 0 and ch in "{;":
+                return ch == "{"
+    return False
+
+
+def impl_type(rest):
+    """`Tenant` from the text after `impl` in `impl<S> FromRequestParts<S> for Tenant<Member> {`."""
+    rest = rest.split(" where ")[0].rstrip(" {")
+    if rest.startswith("<"):
+        depth = 0
+        for i, ch in enumerate(rest):
+            depth += {"<": 1, ">": -1}.get(ch, 0)
+            if depth == 0:
+                rest = rest[i + 1:]
+                break
+    rest = rest.split(" for ")[-1]
+    match = re.match(r"[&\s]*(?:dyn\s+|mut\s+)?([\w:]+)", rest)
+    return match.group(1).split("::")[-1] if match else "?"
+
+
+def containers(lines, patterns):
+    """(start, end, name, test) for each brace block opened by a line matching PATTERNS."""
+    out = []
+    for index, line in enumerate(lines):
+        for pattern, naming in patterns:
+            match = pattern.match(line)
+            if match:
+                end = brace_end(lines, index)
+                if end is not None:
+                    test = any(RS_TEST_ATTR.search(attr) for attr in attributes_above(lines, index))
+                    out.append((index, end, naming(match), test))
+                break
+    return out
+
+
+def functions(path, rel):
+    """Every function defined in PATH: [{name, line, signature, test}], lines as `code_lines` counts them."""
+    suffix = path.suffix
+    lines = code_lines(path.read_text(errors="replace"), COMMENT.get(suffix, "//"))
+    out = []
+
+    def add(index, parts, test):
+        out.append({"name": "::".join(parts), "line": index + 1, "signature": lines[index].strip(), "test": test})
+
+    if suffix == ".rs":
+        blocks = containers(lines, [
+            (RS_IMPL, lambda m: impl_type(m.group(1))),
+            (RS_TRAIT, lambda m: m.group(1)),
+            (RS_MOD, lambda m: m.group(1)),
+        ])
+        for index, line in enumerate(lines):
+            match = RS_FN.match(line)
+            if not match or not has_body(lines, index):
+                continue
+            around = [b for b in blocks if b[0] < index <= b[1]]
+            test = any(b[3] or b[2] == "tests" for b in around) or any(
+                RS_TEST_ATTR.search(attr) for attr in attributes_above(lines, index))
+            add(index, [b[2] for b in around] + [match.group(1)], test)
+    elif suffix == ".py":
+        stack = []
+        for index, line in enumerate(lines):
+            match = PY_DEF.match(line)
+            if not match:
+                continue
+            indent, what, name = len(match.group(1)), match.group(2), match.group(3)
+            stack = [entry for entry in stack if entry[0] < indent]
+            names = [entry[1] for entry in stack]
+            if what == "def":
+                test = name.startswith("test_") or any(n.startswith("Test") for n in names) or any(
+                    "fixture" in attr for attr in attributes_above(lines, index))
+                add(index, names + [name], test)
+            stack.append((indent, name))
+    elif suffix == ".go":
+        for index, line in enumerate(lines):
+            match = GO_FUNC.match(line)
+            if match:
+                name = match.group(2)
+                test = bool(re.match(r"(Test|Benchmark|Example|Fuzz)[A-Z_]", name))
+                add(index, [p for p in (match.group(1), name) if p], test)
+    else:
+        classes = containers(lines, [(JS_CLASS, lambda m: m.group(1))])
+        for index, line in enumerate(lines):
+            match = JS_FN.match(line) or JS_ARROW.match(line)
+            around = [c for c in classes if c[0] < index <= c[1]]
+            if not match and around:
+                method = JS_METHOD.match(line)
+                match = method if method and method.group(1) not in JS_KEYWORDS else None
+            if match:
+                add(index, [c[2] for c in around] + [match.group(1)], False)
+    seen = {}
+    for entry in out:  # the same name twice in one file (two impls of `fmt`) gets #2, #3
+        seen[entry["name"]] = seen.get(entry["name"], 0) + 1
+        if seen[entry["name"]] > 1:
+            entry["name"] += f"#{seen[entry['name']]}"
+    return out
+
+
+def source_files(root):
+    listed = git("ls-files", "--cached", "--others", "--exclude-standard", "-z", cwd=root)
+    return sorted(rel for rel in listed.split("\0") if rel and Path(rel).suffix in SOURCE and (root / rel).is_file())
+
+
+def split_symbol(symbol):
+    rel, _, name = symbol.partition("::")
+    if not name:
+        die(f"{symbol!r} is not <path from repo root>::<item>")
+    return rel, name
+
+
+def resolve(root, state, symbol, path=None):
+    """The inventory entry for SYMBOL, read from PATH (default: the snapshot's copy of its file)."""
+    rel, name = split_symbol(symbol)
+    path = path or snapshot_file(root, state, rel)
+    found = [entry for entry in functions(path, rel) if entry["name"] == name]
+    return found[0] if found else None
+
+
+def scope_rules(state):
+    return load(state / "scope.json", {"exclude": [], "include": []})
+
+
+def in_scope(rel, rules, tests):
+    """None when REL counts toward coverage, else the reason it does not."""
+    import fnmatch
+    if any(fnmatch.fnmatch(rel, glob) for glob in rules["include"]):
+        return None
+    if any(fnmatch.fnmatch(rel, glob) for glob in rules["exclude"]):
+        return "excluded"
+    reason = file_scope(rel)
+    return None if reason == "test" and tests else reason
+
+
+def marks(root, state, progress, path_of):
+    """symbol -> status, with 'stale' when the body changed since it was marked."""
+    out = {}
+    for symbol, entry in progress.items():
+        path = path_of(entry["file"])
+        found = body(path, entry["signature"], entry.get("line")) if path.exists() else None
+        if not found:
+            out[symbol] = "missing"
+        elif digest(found[2]) != entry["hash"]:
+            out[symbol] = "stale"
+        else:
+            out[symbol] = entry["status"]
+    return out
+
+
+BOX_OF = {"known": "[x]", "edge": "[~]", "skipped": "[-]", "stale": "[!]"}
+
+
 # ---------- state commands ----------
 
 def cmd_dir(args):
     print(state_dir(repo_root()))
 
 
+def located(root, state, symbol):
+    """(rel, path, inventory entry, body) for SYMBOL in the snapshot, or die."""
+    rel, _ = split_symbol(symbol)
+    path = snapshot_file(root, state, rel)
+    entry = resolve(root, state, symbol, path)
+    found = entry and body(path, entry["signature"], entry["line"])
+    if not found:
+        die(f"no function {symbol!r}: `coverage --list {rel}` prints the names in that file")
+    return rel, path, entry, found
+
+
 def cmd_hash(args):
     root = repo_root()
     state = state_dir(root)
-    path = snapshot_file(root, state, relative(root, state, args.file))
-    lines = code_lines(path.read_text(), COMMENT.get(path.suffix, "//"))
-    signature = lines[args.line - 1].strip()
-    found = body(path, signature)
-    if not found:
-        die(f"could not find one body for {signature!r} in {path}")
-    print(json.dumps({"signature": signature, "start": found[0], "end": found[1], "hash": digest(found[2])}))
+    _, _, entry, found = located(root, state, args.symbol)
+    print(json.dumps({"signature": entry["signature"], "start": found[0], "end": found[1], "hash": digest(found[2])}))
 
 
 def cmd_mark(args):
     root = repo_root()
     state = state_dir(root)
     progress = load(state / "progress.json", {})
-    rel = relative(root, state, args.file)
-    path = snapshot_file(root, state, rel)
-    lines = code_lines(path.read_text(), COMMENT.get(path.suffix, "//"))
-    signature = lines[args.line - 1].strip()
-    found = body(path, signature)
-    if not found:
-        die(f"could not find one body for {signature!r} in {rel}")
+    rel, _, entry_found, found = located(root, state, args.symbol)
     entry = progress.get(args.symbol, {"history": []})
     entry.update({
         "status": args.status,
         "evidence": args.evidence,
         "file": rel,
-        "signature": signature,
+        "signature": entry_found["signature"],
+        "line": entry_found["line"],
         "hash": digest(found[2]),
         "commit": current(state).get("commit") or git("rev-parse", "HEAD", cwd=root),
         "updated": datetime.date.today().isoformat(),
@@ -256,23 +456,72 @@ def cmd_status(args):
     state = state_dir(root)
     progress = load(state / "progress.json", {})
     base = Path(args.tree) if args.tree else root
+    verdicts = marks(root, state, progress, lambda rel: base / rel)
     counts = {}
     for symbol, entry in sorted(progress.items()):
-        path = base / entry["file"]
-        found = body(path, entry["signature"]) if path.exists() else None
-        if not found:
-            verdict = "missing"
-        elif digest(found[2]) != entry["hash"]:
-            verdict = f"stale ({entry['status']} before)"
-        else:
-            verdict = entry["status"]
-        counts[verdict.split()[0]] = counts.get(verdict.split()[0], 0) + 1
-        where = f"{entry['file']}:{found[0]}" if found else entry["file"]
-        print(f"{verdict:22} {symbol}  {where}  — {entry['evidence']}")
+        verdict = verdicts[symbol]
+        counts[verdict] = counts.get(verdict, 0) + 1
+        shown = f"stale ({entry['status']} before)" if verdict == "stale" else verdict
+        print(f"{shown:22} {symbol}  — {entry['evidence']}")
     summary = ", ".join(f"{n} {k}" for k, n in sorted(counts.items())) or "nothing marked yet"
     print(f"\n{summary}\nstate: {state}")
     if current(state):
         print(f"current: {json.dumps(current(state), ensure_ascii=False)}")
+
+
+def bar(part, whole, width=12):
+    filled = round(width * part / whole) if whole else 0
+    return "█" * filled + "░" * (width - filled)
+
+
+def cmd_coverage(args):
+    root = repo_root()
+    state = state_dir(root)
+    rules = scope_rules(state)
+    if args.exclude or args.include:
+        rules["exclude"] = sorted(set(rules["exclude"]) | set(args.exclude or []))
+        rules["include"] = sorted(set(rules["include"]) | set(args.include or []))
+        save(state / "scope.json", rules)
+    progress = load(state / "progress.json", {})
+    verdicts = marks(root, state, progress, lambda rel: root / rel)
+    groups, outside, listed = {}, {}, []
+    for rel in source_files(root):
+        reason = in_scope(rel, rules, args.tests)
+        for entry in functions(root / rel, rel):
+            why = reason or ("test" if entry["test"] and not args.tests else None)
+            if why:
+                outside[why] = outside.get(why, 0) + 1
+                continue
+            symbol = f"{rel}::{entry['name']}"
+            status = verdicts.get(symbol, "unknown")
+            key = rel if args.by == "file" else str(Path(rel).parent)
+            group = groups.setdefault(key, {})
+            group[status] = group.get(status, 0) + 1
+            if args.list is not None and rel.startswith(args.list):
+                listed.append((BOX_OF.get(status, "[ ]"), symbol, entry["line"]))
+    total = {}
+    for group in groups.values():
+        for status, n in group.items():
+            total[status] = total.get(status, 0) + n
+    counted = sum(total.values()) - total.get("skipped", 0)
+    known = total.get("known", 0)
+    width = max([len(key) for key in groups] + [10])
+    if args.list is not None:
+        for box, symbol, line in listed:
+            print(f"{box} {symbol} :{line}")
+        groups = {}
+    else:
+        print(f"{'':{width}}  known  edge  stale  left  total")
+    for key in sorted(groups):
+        g = groups[key]
+        n = sum(g.values()) - g.get("skipped", 0)
+        left = n - g.get("known", 0) - g.get("edge", 0) - g.get("stale", 0)
+        print(f"{key:{width}}  {g.get('known', 0):5}  {g.get('edge', 0):4}  {g.get('stale', 0):5}  {left:4}  {n:5}  {bar(g.get('known', 0), n)}")
+    share = f"{100 * known / counted:.1f}%" if counted else "n/a"
+    out = ", ".join(f"{n} {why}" for why, n in sorted(outside.items())) or "none"
+    print(f"\ncoverage: {known}/{counted} functions known ({share}); {total.get('edge', 0)} edge, "
+          f"{total.get('stale', 0)} stale, {total.get('skipped', 0)} skipped")
+    print(f"out of scope: {out} (scope.json: exclude {rules['exclude'] or '[]'}, include {rules['include'] or '[]'})")
 
 
 # ---------- worktree ----------
@@ -304,8 +553,8 @@ def merge(into, extra):
 
 
 def show_types(tree):
-    """Zed settings for the worktree: inlay hints show every binding's and chain step's type,
-    and hovering a type shows its whole definition (rust-analyzer stops at 5 fields by default)."""
+    """Zed settings for TREE: inlay hints show every binding's and chain step's type, and hovering
+    a type shows its whole definition (rust-analyzer stops at 5 fields by default)."""
     settings = tree / ".zed" / "settings.json"
     wanted = {
         "inlay_hints": {"enabled": True, "show_type_hints": True, "show_parameter_hints": True, "show_other_hints": True},
@@ -323,17 +572,36 @@ def show_types(tree):
     settings.write_text("\n".join(header + [body_text]) + "\n")
 
 
+def real_content(root, state, rel):
+    """REL as the user wrote it, without anything `annotate --checkout` drew into it; None if absent."""
+    backup = state / "checkout" / rel
+    if backup.exists():
+        return backup.read_bytes() or None
+    path = root / rel
+    if not path.is_file():
+        return None
+    if path.suffix not in COMMENT:
+        return path.read_bytes()
+    text = path.read_text(errors="replace")
+    clean = "\n".join(code_lines(text, COMMENT[path.suffix])) + "\n"
+    return (clean if clean.strip() != text.strip() else text).encode()
+
+
 def cmd_worktree(args):
     root = repo_root()
     state = state_dir(root)
     tree = state / "worktree"
     head = git("rev-parse", "HEAD", cwd=root)
-    dirty = [] if args.head else dirty_paths(root)
+    dirty = []
+    for status, rel in [] if args.head else dirty_paths(root):
+        content = real_content(root, state, rel)
+        committed = subprocess.run(["git", "show", f"HEAD:{rel}"], cwd=root, capture_output=True).stdout
+        if content is not None and content.strip() == committed.strip():
+            continue  # only drawn on: the user's code is HEAD's
+        dirty.append((status, rel, content))
     fingerprint = hashlib.sha256()
-    for status, rel in dirty:
-        fingerprint.update(f"{status} {rel}\n".encode())
-        if (root / rel).is_file():
-            fingerprint.update((root / rel).read_bytes())
+    for status, rel, content in dirty:
+        fingerprint.update(f"{status} {rel}\n".encode() + (content or b""))
     snapshot = f"{head}+{fingerprint.hexdigest()[:8]}" if dirty else head
     now = current(state)
     if tree.exists() and now.get("commit") == snapshot and not args.fresh:
@@ -345,12 +613,12 @@ def cmd_worktree(args):
         shutil.rmtree(tree, ignore_errors=True)
     git("worktree", "prune", cwd=root)
     git("worktree", "add", "--detach", str(tree), head, cwd=root)
-    for _, rel in dirty:
-        source, target = root / rel, tree / rel
-        if source.is_file():
+    for _, rel, content in dirty:
+        target = tree / rel
+        if content is not None:
             target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(source, target)
-        elif not source.exists() and target.exists():
+            target.write_bytes(content)
+        elif target.exists():
             target.unlink()
     shutil.rmtree(state / "pristine", ignore_errors=True)
     show_types(tree)
@@ -380,12 +648,19 @@ def pristine_copy(state, tree, rel):
 #
 # Probe kinds, told apart by their keys:
 #   value     {file, line, label, expr, after?|before?}   what a binding holds
-#   call      {file, line, label, args, call, before?}    a pure call's arguments → result
+#   call      {file, line, label, callee, args, call, before?}
+#                                                          a pure call, evaluated again by the probe
+#             {file, line, label, callee, args, result, after}
+#                                                          a call with effects: ARGS printed above LINE,
+#                                                          RESULT (the binding it fills) below AFTER;
+#                                                          a "template" applies to the RESULT line
 #   stages    {file, line, after, label, stages: [{line, label, expr?}], expr?}
 #                                                          a chain, stage by stage
-#   card      {file, line, card, from: "path:line"}       a type's definition, drawn above LINE
 #   inferred  {file, line, label, inferred, why}          a value the run could not show
 #   patch     {file, before|after, patch}                 a line the probe run needs (e.g. a derive)
+#
+# CALLEE names the called function as the map does (`<path>::<item>`); the drawing points at it
+# with its line and mark, so the call reads as a door to that function.
 
 STAGE = {".rs": '.inspect(|value| eprintln!("{tag} {id} {{:?}}", &({expr})))'}
 CALL = {
@@ -395,9 +670,9 @@ CALL = {
 
 
 def kind(probe):
-    for key in ("card", "patch", "stages", "call", "inferred"):
+    for key in ("patch", "stages", "call", "result", "inferred"):
         if key in probe:
-            return key
+            return "call" if key == "result" else key
     return "value"
 
 
@@ -415,7 +690,7 @@ def template_for(probe, table, suffix):
 def insertions(probe, lines, suffix):
     """(index, text) pairs: TEXT goes in before LINES[index]."""
     found = kind(probe)
-    if found in ("card", "inferred"):
+    if found == "inferred":
         return []
     if found == "patch":
         at = probe["before"] - 1 if probe.get("before") else probe["after"]
@@ -429,6 +704,11 @@ def insertions(probe, lines, suffix):
             text = template_for({}, PROBE, suffix).format(tag=TAG, id=probe["id"], expr=probe["expr"])
             out.append((probe["after"], indent_of(lines[probe["line"] - 1]) + text))
         return out
+    if found == "call" and "result" in probe:
+        line, after = probe["line"], probe["after"]
+        args = template_for({}, PROBE, suffix).format(tag=TAG, id=f"{probe['id']}a", expr=probe["args"])
+        result = template_for(probe, PROBE, suffix).format(tag=TAG, id=f"{probe['id']}r", expr=probe["result"])
+        return [(line - 1, indent_of(lines[line - 1]) + args), (after, indent_of(lines[line - 1]) + result)]
     if found == "call":
         before = probe.get("before") or probe["line"]
         text = template_for(probe, CALL, suffix).format(tag=TAG, id=probe["id"], args=probe["args"], call=probe["call"])
@@ -446,8 +726,15 @@ def cmd_probe(args):
     spec = json.loads(Path(args.spec).read_text())
     probes = spec["probes"]
     for index, probe in enumerate(probes):
+        if "card" in probe:
+            die(f"probe {index} is a card: types are left to the language server, drop it from {args.spec}")
         probe["id"] = f"p{index}"
     touched = 0
+    pristine = state / "pristine"
+    for keep in pristine.rglob("*") if pristine.exists() else []:
+        # Files an earlier spec probed go back to clean, so no stale probe prints under a reused id.
+        if keep.is_file() and str(keep.relative_to(pristine)) not in {p["file"] for p in probes}:
+            shutil.copy2(keep, tree / keep.relative_to(pristine))
     for rel in {p["file"] for p in probes}:
         lines = pristine_copy(state, tree, rel).read_text().splitlines()
         planned = []
@@ -476,6 +763,7 @@ def cmd_collect(args):
             die(f"--segment wants LABEL:N with LABEL one of the value probes' labels, got {args.segment!r}")
         boundary, segment = matches[0], int(number)
     hits, seen = {}, 0
+    effectful = {p["id"] for p in plan["probes"] if kind(p) == "call" and "result" in p}
     for raw in Path(args.log).read_text(errors="replace").splitlines():
         index = raw.find(TAG + " ")
         if index < 0:
@@ -485,6 +773,17 @@ def cmd_collect(args):
             seen += 1
         if boundary is None or seen == segment:
             hits.setdefault(probe_id, []).append(value)
+            # A call with effects prints its arguments and its result from two lines; pair them in
+            # log order, so a call that never reached its result line (an early return, a let-else)
+            # keeps its arguments with ⊘ instead of borrowing the next call's result.
+            if probe_id[-1:] == "a" and probe_id[:-1] in effectful:
+                hits.setdefault(probe_id[:-1], []).append(value + f" → {UNREACHED}")
+            elif probe_id[-1:] == "r" and probe_id[:-1] in effectful:
+                calls = hits.setdefault(probe_id[:-1], [])
+                if calls and calls[-1].endswith(f" → {UNREACHED}"):
+                    calls[-1] = calls[-1][: -len(UNREACHED)] + value
+                else:
+                    calls.append(f"? → {value}")
     scenario = args.scenario or plan.get("scenario") or "scenario"
     values = []
     for probe in plan["probes"]:
@@ -681,33 +980,41 @@ def table(hits, limit):
     return rows
 
 
-def card_rows(root, state, value):
-    rel, _, line = value["from"].rpartition(":")
-    path = snapshot_file(root, state, rel)
-    lines = code_lines(path.read_text(), COMMENT.get(path.suffix, "//"))
-    found = body(path, lines[int(line) - 1])
-    if not found:
-        die(f"could not read the definition at {value['from']}")
-    rows = found[2].splitlines()
-    margin = min(len(indent_of(row)) for row in rows)
-    return [re.sub(r"\bpub(\([^)]*\))? ", "", row[margin:]) for row in rows], f"{Path(rel).name}:{found[0]}"
+def pointer(root, state, value, opts):
+    """`▸ list.rs:341 [ ]`: where a call's callee lives and how well the user knows it."""
+    symbol = value.get("callee")
+    if not symbol:
+        return ""
+    entry = resolve(root, state, symbol)
+    where = f"{Path(split_symbol(symbol)[0]).name}:{entry['line']}" if entry else f"{symbol} (not found)"
+    return f"▸ {where} {BOX_OF.get(opts.marks.get(symbol), '[ ]')}"
+
+
+def io_rows(hit, width, number=None):
+    """A call's arguments and result as `in ┊` and `out ┊` rows, the result laid out whole."""
+    arguments, _, result = hit.partition(" → ")
+    lead = f"{number} " if number is not None else ""
+    pad = " " * len(lead)
+    rows = [f"{lead}in  ┊ {row}" if i == 0 else f"{pad}    ┊ {row}"
+            for i, row in enumerate(pretty(arguments.strip(), width - 6 - len(lead)) if arguments.strip() else [])]
+    rows += [f"{lead if not rows else pad}out ┊ {row}" if i == 0 else f"{pad}    ┊ {row}"
+             for i, row in enumerate(pretty(result, width - 6 - len(lead)))]
+    return rows
 
 
 def render(root, state, value, source, opts):
     """('inline', chip) or ('box', rows) for one traced value."""
-    label = value.get("label") or value.get("expr") or value.get("card") or "value"
+    label = value.get("label") or value.get("expr") or "value"
     icon = SOURCE_ICON.get(source or "", "")
     found = value["kind"]
-    if found == "card":
-        rows, where = card_rows(root, state, value)
-        return "box", boxed(f"◆ {value['card']}", rows, opts.width, where)
+    after = " ".join(part for part in (pointer(root, state, value, opts), icon) if part)
     if found == "inferred":
         chip = f"⟦{INFERRED} {label} = {value['inferred']}⟧"
         why = value.get("why")
         if cells(chip) <= opts.inline and not why:
-            return "inline", chip
+            return "inline", chip + (f" {after}" if after else "")
         rows = pretty(value["inferred"], opts.width) + ([f"┄ inferred: {why}"] if why else [])
-        return "box", boxed(f"{INFERRED} {label}", rows, opts.width)
+        return "box", boxed(f"{INFERRED} {label}", rows, opts.width, after)
     if found == "stages":
         rows = []
         for stage in value["stages"]:
@@ -718,25 +1025,33 @@ def render(root, state, value, source, opts):
         return "box", boxed(f"{OBSERVED} {label}, stage by stage", capped(rows, opts.rows), opts.width, icon)
     hits = value["hits"]
     if not hits:
-        return "inline", f"⟦{UNREACHED} {label}: not reached⟧"
+        return "inline", f"⟦{UNREACHED} {label}: not reached⟧" + (f" {after}" if after else "")
     if len(hits) == 1:
-        chip = f"⟦{OBSERVED} {label} = {hits[0]}⟧" if found == "value" else f"⟦{OBSERVED} {label}: {hits[0]}⟧"
-        if cells(chip) <= opts.inline:
-            return "inline", chip + (f" {icon}" if icon else "")
-        if found == "call":
-            arguments, _, result = hits[0].partition(" → ")
-            rows = [f"in  ┊ {arguments}"] + [f"{'out' if i == 0 else '   '} ┊ {row}" for i, row in enumerate(pretty(result, opts.width - 6))]
+        arguments, _, result = hits[0].partition(" → ")
+        if found == "value":
+            chip = f"⟦{OBSERVED} {label} = {hits[0]}⟧"
+        elif arguments.strip():
+            chip = f"⟦{OBSERVED} {label}: {arguments.strip()} → {result}⟧"
         else:
-            rows = pretty(hits[0], opts.width)
-        return "box", boxed(f"{OBSERVED} {label}", capped(rows, opts.rows), opts.width, icon)
-    return "box", boxed(f"{OBSERVED} {label} ×{len(hits)}", table(hits, opts.rows), opts.width, icon)
+            chip = f"⟦{OBSERVED} {label} → {result}⟧"
+        if cells(chip) <= opts.inline:
+            return "inline", chip + (f" {after}" if after else "")
+        rows = io_rows(hits[0], opts.width) if found == "call" else pretty(hits[0], opts.width)
+        return "box", boxed(f"{OBSERVED} {label}", capped(rows, opts.rows), opts.width, after)
+    if found == "call":
+        rows = []
+        for number, hit in enumerate(hits, 1):
+            rows += io_rows(hit, opts.width, f"{number:>{len(str(len(hits)))}}")
+        return "box", boxed(f"{OBSERVED} {label} ×{len(hits)}", capped(rows, opts.rows), opts.width, after)
+    return "box", boxed(f"{OBSERVED} {label} ×{len(hits)}", table(hits, opts.rows), opts.width, after)
 
 
 def cmd_annotate(args):
     root = repo_root()
     state = state_dir(root)
     tree = worktree_or_die(state)
-    files, cards = {}, set()
+    files = {}
+    args.marks = marks(root, state, load(state / "progress.json", {}), lambda rel: snapshot_file(root, state, rel))
     for name in args.scenario:
         trace = load(state / "traces" / f"{name}.json", None)
         if not trace:
@@ -745,9 +1060,7 @@ def cmd_annotate(args):
             if not args.full_ids:
                 value = json.loads(short_ids(json.dumps(value, ensure_ascii=False)))
             if value["kind"] == "card":
-                if (value["file"], value["card"]) in cards:
-                    continue  # one card per type when several scenarios are drawn
-                cards.add((value["file"], value["card"]))
+                continue  # traces from before cards were dropped
             files.setdefault(value["file"], []).append((value, trace.get("source")))
     for rel, values in files.items():
         lines = pristine_copy(state, tree, rel).read_text().splitlines()
@@ -758,9 +1071,9 @@ def cmd_annotate(args):
             if drawn_kind == "inline":
                 chips.setdefault(value["line"], []).append(drawn)
                 continue
-            # Cards and values probed `before` a line sit above it; the rest under their statement.
-            if value["kind"] == "card" or (value["kind"] == "value" and value.get("before")):
-                at = (value.get("before") or value["line"]) - 1
+            # Values probed `before` a line sit above it; the rest under their statement.
+            if value["kind"] == "value" and value.get("before"):
+                at = value["before"] - 1
             else:
                 at = value.get("after") or value["line"]
             boxes.setdefault(at, (value["line"], []))[1].extend(drawn)
@@ -777,10 +1090,40 @@ def cmd_annotate(args):
     print(f"annotated {sum(map(len, files.values()))} values in {len(files)} files under {tree}")
     for rel in files:
         print(f"  {tree / rel}")
+    if args.checkout:
+        to_checkout(root, state, tree, set(files))
+
+
+def same_code(path, snapshot):
+    """True when PATH differs from SNAPSHOT by annotations at most."""
+    comment = COMMENT.get(path.suffix, "//")
+    return path.exists() and code_lines(path.read_text(), comment) == code_lines(snapshot.read_text(), comment)
+
+
+def to_checkout(root, state, tree, drawn):
+    """Draw into the user's checkout too: each probed file gets its annotated (or clean) copy,
+    but only where the user has not changed its code since the snapshot."""
+    pristine = state / "pristine"
+    for keep in sorted(pristine.rglob("*")):
+        if not keep.is_file():
+            continue
+        rel = str(keep.relative_to(pristine))
+        if not same_code(root / rel, keep):
+            print(f"  skipped {rel}: its code changed since the snapshot; run `worktree` and annotate again")
+            continue
+        shutil.copy2(tree / rel if rel in drawn else keep, root / rel)
+    backup = state / "checkout" / ".zed" / "settings.json"
+    settings = root / ".zed" / "settings.json"
+    if not backup.exists():
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        backup.write_text(settings.read_text() if settings.exists() else "")
+    show_types(root)
+    print(f"drew into the checkout {root}; `restore --checkout` takes it out")
 
 
 def cmd_restore(args):
-    state = state_dir(repo_root())
+    root = repo_root()
+    state = state_dir(root)
     tree = worktree_or_die(state)
     pristine = state / "pristine"
     restored = 0
@@ -788,7 +1131,18 @@ def cmd_restore(args):
         if keep.is_file():
             shutil.copy2(keep, tree / keep.relative_to(pristine))
             restored += 1
-    print(f"restored {restored} files in {tree}")
+            main = root / keep.relative_to(pristine)
+            if args.checkout and same_code(main, keep):
+                shutil.copy2(keep, main)
+    print(f"restored {restored} files in {tree}" + (" and the checkout" if args.checkout else ""))
+    backup = state / "checkout" / ".zed" / "settings.json"
+    if args.checkout and backup.exists():
+        settings = root / ".zed" / "settings.json"
+        if backup.read_text():
+            settings.write_text(backup.read_text())
+        elif settings.exists():
+            settings.unlink()
+        shutil.rmtree(state / "checkout")
 
 
 def cmd_clean(args):
@@ -813,14 +1167,18 @@ def main():
     p = sub.add_parser("status", help="every marked function: its status, or stale when its body changed")
     p.add_argument("--tree", help="check against this checkout instead of the repository")
     p.set_defaults(run=cmd_status)
-    p = sub.add_parser("hash", help="locate and hash the definition starting at FILE:LINE")
-    p.add_argument("file")
-    p.add_argument("line", type=int)
+    p = sub.add_parser("coverage", help="how much of the repository's code is known, by directory or file")
+    p.add_argument("--by", choices=("dir", "file"), default="dir")
+    p.add_argument("--list", metavar="PATH", help="list every in-scope function under PATH with its mark")
+    p.add_argument("--tests", action="store_true", help="count test functions too, this once")
+    p.add_argument("--exclude", action="append", metavar="GLOB", help="keep files matching GLOB out of scope (saved)")
+    p.add_argument("--include", action="append", metavar="GLOB", help="bring files matching GLOB into scope (saved)")
+    p.set_defaults(run=cmd_coverage)
+    p = sub.add_parser("hash", help="locate and hash SYMBOL's definition")
+    p.add_argument("symbol", help="<path from repo root>::<item>, as `coverage --list` prints it")
     p.set_defaults(run=cmd_hash)
-    p = sub.add_parser("mark", help="record SYMBOL's status; LINE is its definition's first line")
-    p.add_argument("symbol")
-    p.add_argument("file", help="path from the repository root, or absolute in the repo or worktree")
-    p.add_argument("line", type=int)
+    p = sub.add_parser("mark", help="record SYMBOL's status")
+    p.add_argument("symbol", help="<path from repo root>::<item>, as `coverage --list` prints it")
     p.add_argument("--status", choices=STATUSES, required=True)
     p.add_argument("--evidence", required=True, help="the check and the user's answer, in a few words")
     p.set_defaults(run=cmd_mark)
@@ -844,8 +1202,11 @@ def main():
     p.add_argument("--rows", type=int, default=32, help="most rows in one box")
     p.add_argument("--inline", type=int, default=56, help="widest value kept on its own line")
     p.add_argument("--full-ids", action="store_true", help="draw UUIDs whole instead of as 01a1…6571")
+    p.add_argument("--checkout", action="store_true", help="also draw into the user's checkout where its code is unchanged")
     p.set_defaults(run=cmd_annotate)
-    sub.add_parser("restore", help="put every touched worktree file back to its snapshot").set_defaults(run=cmd_restore)
+    p = sub.add_parser("restore", help="put every touched worktree file back to its snapshot")
+    p.add_argument("--checkout", action="store_true", help="also take the drawing out of the user's checkout")
+    p.set_defaults(run=cmd_restore)
     sub.add_parser("clean", help="remove the worktree, keeping all state").set_defaults(run=cmd_clean)
     args = parser.parse_args()
     args.run(args)
